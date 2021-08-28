@@ -1442,117 +1442,21 @@ func (n *RuntimeGoNakamaModule) StorageDelete(ctx context.Context, deletes []*ru
 }
 
 func (n *RuntimeGoNakamaModule) MultiUpdate(ctx context.Context, accountUpdates []*runtime.AccountUpdate, storageWrites []*runtime.StorageWrite, walletUpdates []*runtime.WalletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
-	// Process account update inputs.
-	accountUpdateOps := make([]*accountUpdate, 0, len(accountUpdates))
-	for _, update := range accountUpdates {
-		u, err := uuid.FromString(update.UserID)
-		if err != nil {
-			return nil, nil, errors.New("expects user ID to be a valid identifier")
-		}
-
-		var metadataWrapper *wrapperspb.StringValue
-		if update.Metadata != nil {
-			metadataBytes, err := json.Marshal(update.Metadata)
-			if err != nil {
-				return nil, nil, fmt.Errorf("error encoding metadata: %v", err.Error())
-			}
-			metadataWrapper = &wrapperspb.StringValue{Value: string(metadataBytes)}
-		}
-
-		var displayNameWrapper *wrapperspb.StringValue
-		if update.DisplayName != "" {
-			displayNameWrapper = &wrapperspb.StringValue{Value: update.DisplayName}
-		}
-		var timezoneWrapper *wrapperspb.StringValue
-		if update.Timezone != "" {
-			timezoneWrapper = &wrapperspb.StringValue{Value: update.Timezone}
-		}
-		var locationWrapper *wrapperspb.StringValue
-		if update.Location != "" {
-			locationWrapper = &wrapperspb.StringValue{Value: update.Location}
-		}
-		var langWrapper *wrapperspb.StringValue
-		if update.LangTag != "" {
-			langWrapper = &wrapperspb.StringValue{Value: update.LangTag}
-		}
-		var avatarWrapper *wrapperspb.StringValue
-		if update.AvatarUrl != "" {
-			avatarWrapper = &wrapperspb.StringValue{Value: update.AvatarUrl}
-		}
-
-		accountUpdateOps = append(accountUpdateOps, &accountUpdate{
-			userID:      u,
-			username:    update.Username,
-			displayName: displayNameWrapper,
-			timezone:    timezoneWrapper,
-			location:    locationWrapper,
-			langTag:     langWrapper,
-			avatarURL:   avatarWrapper,
-			metadata:    metadataWrapper,
-		})
-	}
-
-	// Process storage write inputs.
-	storageWriteOps := make(StorageOpWrites, 0, len(storageWrites))
-	for _, write := range storageWrites {
-		if write.Collection == "" {
-			return nil, nil, errors.New("expects collection to be a non-empty string")
-		}
-		if write.Key == "" {
-			return nil, nil, errors.New("expects key to be a non-empty string")
-		}
-		if write.UserID != "" {
-			if _, err := uuid.FromString(write.UserID); err != nil {
-				return nil, nil, errors.New("expects an empty or valid user id")
-			}
-		}
-		if maybeJSON := []byte(write.Value); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
-			return nil, nil, errors.New("value must be a JSON-encoded object")
-		}
-
-		op := &StorageOpWrite{
-			Object: &api.WriteStorageObject{
-				Collection:      write.Collection,
-				Key:             write.Key,
-				Value:           write.Value,
-				Version:         write.Version,
-				PermissionRead:  &wrapperspb.Int32Value{Value: int32(write.PermissionRead)},
-				PermissionWrite: &wrapperspb.Int32Value{Value: int32(write.PermissionWrite)},
-			},
-		}
-		if write.UserID == "" {
-			op.OwnerID = uuid.Nil.String()
-		} else {
-			op.OwnerID = write.UserID
-		}
-
-		storageWriteOps = append(storageWriteOps, op)
-	}
-
-	// Process wallet update inputs.
-	walletUpdateOps := make([]*walletUpdate, len(walletUpdates))
-	for i, update := range walletUpdates {
-		uid, err := uuid.FromString(update.UserID)
-		if err != nil {
-			return nil, nil, errors.New("expects a valid user id")
-		}
-
-		metadataBytes := []byte("{}")
-		if update.Metadata != nil {
-			metadataBytes, err = json.Marshal(update.Metadata)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to convert metadata: %s", err.Error())
-			}
-		}
-
-		walletUpdateOps[i] = &walletUpdate{
-			UserID:    uid,
-			Changeset: update.Changeset,
-			Metadata:  string(metadataBytes),
-		}
+	accountUpdateOps, storageWriteOps, walletUpdateOps, err := processMultiUpdateInput(accountUpdates, storageWrites, walletUpdates)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return MultiUpdate(ctx, n.logger, n.db, accountUpdateOps, storageWriteOps, walletUpdateOps, updateLedger)
+}
+
+func (n *RuntimeGoNakamaModule) MultiUpdateTx(ctx context.Context, tx *sql.Tx, accountUpdates []*runtime.AccountUpdate, storageWrites []*runtime.StorageWrite, walletUpdates []*runtime.WalletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
+	accountUpdateOps, storageWriteOps, walletUpdateOps, err := processMultiUpdateInput(accountUpdates, storageWrites, walletUpdates)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return MultiUpdateTx(ctx, n.logger, tx, accountUpdateOps, storageWriteOps, walletUpdateOps, updateLedger)
 }
 
 func (n *RuntimeGoNakamaModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator, resetSchedule string, metadata map[string]interface{}) error {
