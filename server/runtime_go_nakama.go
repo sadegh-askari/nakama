@@ -54,7 +54,7 @@ type RuntimeGoNakamaModule struct {
 	sessionCache         SessionCache
 	matchRegistry        MatchRegistry
 	tracker              Tracker
-	metrics              *Metrics
+	metrics              Metrics
 	streamManager        StreamManager
 	router               MessageRouter
 
@@ -65,7 +65,7 @@ type RuntimeGoNakamaModule struct {
 	matchCreateFn RuntimeMatchCreateFunction
 }
 
-func NewRuntimeGoNakamaModule(logger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, matchRegistry MatchRegistry, tracker Tracker, metrics *Metrics, streamManager StreamManager, router MessageRouter) *RuntimeGoNakamaModule {
+func NewRuntimeGoNakamaModule(logger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter) *RuntimeGoNakamaModule {
 	return &RuntimeGoNakamaModule{
 		logger:               logger,
 		db:                   db,
@@ -1632,7 +1632,7 @@ func (n *RuntimeGoNakamaModule) LeaderboardsGetId(ctx context.Context, IDs []str
 	return LeaderboardsGet(n.leaderboardCache, IDs), nil
 }
 
-func (n *RuntimeGoNakamaModule) TournamentCreate(ctx context.Context, id string, sortOrder, operator, resetSchedule string, metadata map[string]interface{}, title, description string, category, startTime, endTime, duration, maxSize, maxNumScore int, joinRequired bool) error {
+func (n *RuntimeGoNakamaModule) TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator, resetSchedule string, metadata map[string]interface{}, title, description string, category, startTime, endTime, duration, maxSize, maxNumScore int, joinRequired bool) error {
 	if id == "" {
 		return errors.New("expects a tournament ID string")
 	}
@@ -1698,7 +1698,7 @@ func (n *RuntimeGoNakamaModule) TournamentCreate(ctx context.Context, id string,
 		return errors.New("maxNumScore must be >= 0")
 	}
 
-	return TournamentCreate(ctx, n.logger, n.leaderboardCache, n.leaderboardScheduler, id, sort, oper, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired)
+	return TournamentCreate(ctx, n.logger, n.leaderboardCache, n.leaderboardScheduler, id, authoritative, sort, oper, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired)
 }
 
 func (n *RuntimeGoNakamaModule) TournamentDelete(ctx context.Context, id string) error {
@@ -2404,6 +2404,24 @@ func (n *RuntimeGoNakamaModule) ChannelMessageSend(ctx context.Context, channelI
 	}
 
 	return ChannelMessageSend(ctx, n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, contentStr, senderId, senderUsername, persist)
+}
+
+func (n *RuntimeGoNakamaModule) ChannelMessageUpdate(ctx context.Context, channelId, messageId string, content map[string]interface{}, senderId, senderUsername string, persist bool) (*rtapi.ChannelMessageAck, error) {
+	channelIdToStreamResult, err := ChannelIdToStream(channelId)
+	if err != nil {
+		return nil, err
+	}
+
+	contentStr := "{}"
+	if content != nil {
+		contentBytes, err := json.Marshal(content)
+		if err != nil {
+			return nil, fmt.Errorf("error encoding content: %v", err.Error())
+		}
+		contentStr = string(contentBytes)
+	}
+
+	return ChannelMessageUpdate(ctx, n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, messageId, contentStr, senderId, senderUsername, persist)
 }
 
 func (n *RuntimeGoNakamaModule) ChannelIdBuild(ctx context.Context, target string, chanType runtime.ChannelType) (string, error) {

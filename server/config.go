@@ -137,6 +137,9 @@ func CheckConfig(logger *zap.Logger, config Config) map[string]string {
 	if config.GetSession().EncryptionKey == config.GetSession().RefreshEncryptionKey {
 		logger.Fatal("Encryption key and refresh token encryption cannot match", zap.Strings("param", []string{"session.encryption_key", "session.refresh_encryption_key"}))
 	}
+	if config.GetSession().SingleMatch && !config.GetSession().SingleSocket {
+		logger.Fatal("Single match cannot be enabled without single socket", zap.Strings("param", []string{"session.single_match", "session.single_socket"}))
+	}
 	if config.GetRuntime().HTTPKey == "" {
 		logger.Fatal("Runtime HTTP key must be set", zap.String("param", "runtime.http_key"))
 	}
@@ -618,6 +621,8 @@ type SessionConfig struct {
 	TokenExpirySec        int64  `yaml:"token_expiry_sec" json:"token_expiry_sec" usage:"Token expiry in seconds."`
 	RefreshEncryptionKey  string `yaml:"refresh_encryption_key" json:"refresh_encryption_key" usage:"The encryption key used to produce the client refresh token."`
 	RefreshTokenExpirySec int64  `yaml:"refresh_token_expiry_sec" json:"refresh_token_expiry_sec" usage:"Refresh token expiry in seconds."`
+	SingleSocket          bool   `yaml:"single_socket" json:"single_socket" usage:"Only allow one socket per user. Older sessions are disconnected. Default false."`
+	SingleMatch           bool   `yaml:"single_match" json:"single_match" usage:"Only allow one match per user. Older matches receive a leave. Requires single socket to enable. Default false."`
 }
 
 // NewSessionConfig creates a new SessionConfig struct.
@@ -765,6 +770,7 @@ type RuntimeConfig struct {
 	EventQueueWorkers  int               `yaml:"event_queue_workers" json:"event_queue_workers" usage:"Number of workers to use for concurrent processing of events. Default 8."`
 	ReadOnlyGlobals    bool              `yaml:"read_only_globals" json:"read_only_globals" usage:"When enabled marks all Lua runtime global tables as read-only to reduce memory footprint. Default true."` // Kept for backwards compatibility
 	LuaReadOnlyGlobals bool              `yaml:"lua_read_only_globals" json:"lua_read_only_globals" usage:"When enabled marks all Lua runtime global tables as read-only to reduce memory footprint. Default true."`
+	LuaApiStacktrace   bool              `yaml:"lua_api_stacktrace" json:"lua_api_stacktrace" usage:"Include the Lua stacktrace in error responses returned to the client. Default false."`
 	JsEntrypoint       string            `yaml:"js_entrypoint" json:"js_entrypoint" usage:"Specifies the location of the bundled JavaScript runtime source code."`
 }
 
@@ -825,6 +831,7 @@ func NewRuntimeConfig() *RuntimeConfig {
 		EventQueueWorkers:  8,
 		ReadOnlyGlobals:    true,
 		LuaReadOnlyGlobals: true,
+		LuaApiStacktrace:   false,
 	}
 }
 

@@ -247,6 +247,7 @@ func (n *runtimeJavascriptNakamaModule) mappings(r *goja.Runtime) map[string]fun
 		"localcachePut":                   n.localcachePut(r),
 		"localcacheDelete":                n.localcacheDelete(r),
 		"channelMessageSend":              n.channelMessageSend(r),
+		"channelMessageUpdate":            n.channelMessageUpdate(r),
 		"channeldIdBuild":                 n.channelIdBuild(r),
 	}
 }
@@ -424,7 +425,7 @@ func (n *runtimeJavascriptNakamaModule) httpRequest(r *goja.Runtime) func(goja.F
 		n.logger.Debug(fmt.Sprintf("Http Timeout: %v", n.httpClient.Timeout))
 
 		if url == "" {
-			panic(r.NewTypeError("URL string cannot be emptypb."))
+			panic(r.NewTypeError("URL string cannot be empty."))
 		}
 
 		if !(method == "GET" || method == "POST" || method == "PUT" || method == "PATCH") {
@@ -3056,7 +3057,7 @@ func (n *runtimeJavascriptNakamaModule) walletUpdate(r *goja.Runtime) func(goja.
 			}
 		}
 
-		updateLedger := true
+		updateLedger := false
 		if f.Argument(3) != goja.Undefined() {
 			updateLedger = getJsBool(r, f.Argument(3))
 		}
@@ -4485,9 +4486,14 @@ func (n *runtimeJavascriptNakamaModule) tournamentCreate(r *goja.Runtime) func(g
 			panic(r.NewTypeError("expects a tournament ID string"))
 		}
 
+		authoritative := true
+		if f.Argument(1) != goja.Undefined() && f.Argument(1) != goja.Null() {
+			authoritative = getJsBool(r, f.Argument(1))
+		}
+
 		sortOrder := "desc"
-		if f.Argument(1) != goja.Undefined() {
-			sortOrder = getJsString(r, f.Argument(1))
+		if f.Argument(2) != goja.Undefined() {
+			sortOrder = getJsString(r, f.Argument(2))
 		}
 		var sortOrderNumber int
 		switch sortOrder {
@@ -4500,8 +4506,8 @@ func (n *runtimeJavascriptNakamaModule) tournamentCreate(r *goja.Runtime) func(g
 		}
 
 		operator := "best"
-		if f.Argument(2) != goja.Undefined() {
-			operator = getJsString(r, f.Argument(2))
+		if f.Argument(3) != goja.Undefined() {
+			operator = getJsString(r, f.Argument(3))
 		}
 		var operatorNumber int
 		switch operator {
@@ -4518,16 +4524,16 @@ func (n *runtimeJavascriptNakamaModule) tournamentCreate(r *goja.Runtime) func(g
 		}
 
 		var duration int
-		if f.Argument(3) != goja.Undefined() && f.Argument(3) != goja.Null() {
-			duration = int(getJsInt(r, f.Argument(3)))
+		if f.Argument(4) != goja.Undefined() && f.Argument(4) != goja.Null() {
+			duration = int(getJsInt(r, f.Argument(4)))
 		}
 		if duration <= 0 {
 			panic(r.NewTypeError("duration must be > 0"))
 		}
 
 		resetSchedule := ""
-		if f.Argument(4) != goja.Undefined() && f.Argument(4) != goja.Null() {
-			resetSchedule = getJsString(r, f.Argument(4))
+		if f.Argument(5) != goja.Undefined() && f.Argument(5) != goja.Null() {
+			resetSchedule = getJsString(r, f.Argument(5))
 		}
 		if resetSchedule != "" {
 			if _, err := cronexpr.Parse(resetSchedule); err != nil {
@@ -4535,10 +4541,10 @@ func (n *runtimeJavascriptNakamaModule) tournamentCreate(r *goja.Runtime) func(g
 			}
 		}
 
-		metadata := f.Argument(5)
+		metadata := f.Argument(6)
 		metadataStr := "{}"
 		if metadata != goja.Undefined() && metadata != goja.Null() {
-			metadataMap, ok := f.Argument(5).Export().(map[string]interface{})
+			metadataMap, ok := f.Argument(6).Export().(map[string]interface{})
 			if !ok {
 				panic(r.NewTypeError("expects metadata to be an object"))
 			}
@@ -4550,61 +4556,61 @@ func (n *runtimeJavascriptNakamaModule) tournamentCreate(r *goja.Runtime) func(g
 		}
 
 		title := ""
-		if f.Argument(6) != goja.Undefined() && f.Argument(6) != goja.Null() {
-			title = getJsString(r, f.Argument(6))
+		if f.Argument(7) != goja.Undefined() && f.Argument(7) != goja.Null() {
+			title = getJsString(r, f.Argument(7))
 		}
 
 		description := ""
-		if f.Argument(7) != goja.Undefined() && f.Argument(7) != goja.Null() {
-			description = getJsString(r, f.Argument(7))
+		if f.Argument(8) != goja.Undefined() && f.Argument(8) != goja.Null() {
+			description = getJsString(r, f.Argument(8))
 		}
 
 		var category int
-		if f.Argument(8) != goja.Undefined() && f.Argument(8) != goja.Null() {
-			category = int(getJsInt(r, f.Argument(8)))
+		if f.Argument(9) != goja.Undefined() && f.Argument(9) != goja.Null() {
+			category = int(getJsInt(r, f.Argument(9)))
 			if category < 0 || category >= 128 {
 				panic(r.NewTypeError("category must be 0-127"))
 			}
 		}
 
 		var startTime int
-		if f.Argument(9) != goja.Undefined() && f.Argument(9) != goja.Null() {
-			startTime = int(getJsInt(r, f.Argument(9)))
+		if f.Argument(10) != goja.Undefined() && f.Argument(10) != goja.Null() {
+			startTime = int(getJsInt(r, f.Argument(10)))
 			if startTime < 0 {
 				panic(r.NewTypeError("startTime must be >= 0."))
 			}
 		}
 
 		var endTime int
-		if f.Argument(10) != goja.Undefined() && f.Argument(10) != goja.Null() {
-			endTime = int(getJsInt(r, f.Argument(10)))
+		if f.Argument(11) != goja.Undefined() && f.Argument(11) != goja.Null() {
+			endTime = int(getJsInt(r, f.Argument(11)))
 		}
 		if endTime != 0 && endTime <= startTime {
 			panic(r.NewTypeError("endTime must be > startTime. Use 0 to indicate a tournament that never ends."))
 		}
 
 		var maxSize int
-		if f.Argument(11) != goja.Undefined() && f.Argument(11) != goja.Null() {
-			maxSize = int(getJsInt(r, f.Argument(11)))
+		if f.Argument(12) != goja.Undefined() && f.Argument(12) != goja.Null() {
+			maxSize = int(getJsInt(r, f.Argument(12)))
 			if maxSize < 0 {
 				panic(r.NewTypeError("maxSize must be >= 0"))
 			}
 		}
 
 		var maxNumScore int
-		if f.Argument(12) != goja.Undefined() && f.Argument(12) != goja.Null() {
-			maxNumScore = int(getJsInt(r, f.Argument(12)))
+		if f.Argument(13) != goja.Undefined() && f.Argument(13) != goja.Null() {
+			maxNumScore = int(getJsInt(r, f.Argument(13)))
 			if maxNumScore < 0 {
 				panic(r.NewTypeError("maxNumScore must be >= 0"))
 			}
 		}
 
 		joinRequired := false
-		if f.Argument(13) != goja.Undefined() && f.Argument(13) != goja.Null() {
-			joinRequired = getJsBool(r, f.Argument(13))
+		if f.Argument(14) != goja.Undefined() && f.Argument(14) != goja.Null() {
+			joinRequired = getJsBool(r, f.Argument(14))
 		}
 
-		if err := TournamentCreate(context.Background(), n.logger, n.leaderboardCache, n.leaderboardScheduler, id, sortOrderNumber, operatorNumber, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired); err != nil {
+		if err := TournamentCreate(context.Background(), n.logger, n.leaderboardCache, n.leaderboardScheduler, id, authoritative, sortOrderNumber, operatorNumber, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired); err != nil {
 			panic(r.NewGoError(fmt.Errorf("error creating tournament: %v", err.Error())))
 		}
 
@@ -4808,7 +4814,7 @@ func leaderboardRecordsListToJs(r *goja.Runtime, records []*api.LeaderboardRecor
 }
 
 func leaderboardRecordToJsMap(r *goja.Runtime, record *api.LeaderboardRecord) map[string]interface{} {
-	recordMap := make(map[string]interface{}, 11)
+	recordMap := make(map[string]interface{}, 12)
 	recordMap["leaderboardId"] = record.LeaderboardId
 	recordMap["ownerId"] = record.OwnerId
 	if record.Username != nil {
@@ -4819,15 +4825,16 @@ func leaderboardRecordToJsMap(r *goja.Runtime, record *api.LeaderboardRecord) ma
 	recordMap["score"] = record.Score
 	recordMap["subscore"] = record.Subscore
 	recordMap["numScore"] = record.NumScore
+	recordMap["maxNumScore"] = record.MaxNumScore
 	metadataMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(record.Metadata), &metadataMap)
 	if err != nil {
 		panic(r.NewGoError(fmt.Errorf("failed to convert metadata to json: %s", err.Error())))
 	}
 	pointerizeSlices(metadataMap)
-	metadataMap["metadata"] = metadataMap
-	metadataMap["createTime"] = record.CreateTime.Seconds
-	metadataMap["updateTime"] = record.UpdateTime.Seconds
+	recordMap["metadata"] = metadataMap
+	recordMap["createTime"] = record.CreateTime.Seconds
+	recordMap["updateTime"] = record.UpdateTime.Seconds
 	if record.ExpiryTime != nil {
 		recordMap["expiryTime"] = record.ExpiryTime.Seconds
 	} else {
@@ -6033,6 +6040,68 @@ func (n *runtimeJavascriptNakamaModule) channelMessageSend(r *goja.Runtime) func
 	}
 }
 
+func (n *runtimeJavascriptNakamaModule) channelMessageUpdate(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
+	return func(f goja.FunctionCall) goja.Value {
+		channelId := getJsString(r, f.Argument(0))
+
+		messageId := getJsString(r, f.Argument(1))
+
+		contentStr := "{}"
+		if f.Argument(2) != goja.Undefined() && f.Argument(2) != goja.Null() {
+			contentMap, ok := f.Argument(2).Export().(map[string]interface{})
+			if !ok {
+				panic(r.NewTypeError("expects content to be an object"))
+			}
+			contentBytes, err := json.Marshal(contentMap)
+			if err != nil {
+				panic(r.NewTypeError(fmt.Sprintf("error encoding content: %v", err.Error())))
+			}
+			contentStr = string(contentBytes)
+		}
+
+		senderId := uuid.Nil
+		if !goja.IsUndefined(f.Argument(3)) && !goja.IsNull(f.Argument(3)) {
+			senderIdStr := getJsString(r, f.Argument(3))
+			senderUUID, err := uuid.FromString(senderIdStr)
+			if err != nil {
+				panic(r.NewTypeError("expects sender id to be valid identifier"))
+			}
+			senderId = senderUUID
+		}
+
+		var senderUsername string
+		if !goja.IsUndefined(f.Argument(4)) && !goja.IsNull(f.Argument(4)) {
+			senderUsername = getJsString(r, f.Argument(4))
+		}
+
+		persist := true
+		if !goja.IsUndefined(f.Argument(5)) && !goja.IsNull(f.Argument(5)) {
+			persist = getJsBool(r, f.Argument(5))
+		}
+
+		channelIdToStreamResult, err := ChannelIdToStream(channelId)
+		if err != nil {
+			panic(r.NewTypeError(err.Error()))
+		}
+
+		ack, err := ChannelMessageUpdate(context.Background(), n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, messageId, contentStr, senderId.String(), senderUsername, persist)
+		if err != nil {
+			panic(r.NewGoError(fmt.Errorf("failed to update channel message: %s", err.Error())))
+		}
+
+		channelMessageAckMap := make(map[string]interface{}, 7)
+		channelMessageAckMap["channelId"] = ack.ChannelId
+		channelMessageAckMap["messageId"] = ack.MessageId
+		channelMessageAckMap["code"] = ack.Code
+		channelMessageAckMap["username"] = ack.Username
+		channelMessageAckMap["createTime"] = ack.CreateTime.Seconds
+		channelMessageAckMap["updateTime"] = ack.UpdateTime.Seconds
+		channelMessageAckMap["persistent"] = ack.Persistent
+
+		return r.ToValue(channelMessageAckMap)
+	}
+}
+
 func (n *runtimeJavascriptNakamaModule) channelIdBuild(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return func(f goja.FunctionCall) goja.Value {
 		target := getJsString(r, f.Argument(0))
@@ -6256,7 +6325,7 @@ func getJsValidatedPurchasesData(validation *api.ValidatePurchaseResponse) map[s
 }
 
 func getJsValidatedPurchaseData(purchase *api.ValidatedPurchase) map[string]interface{} {
-	validatedPurchaseMap := make(map[string]interface{}, 8)
+	validatedPurchaseMap := make(map[string]interface{}, 9)
 	validatedPurchaseMap["productId"] = purchase.ProductId
 	validatedPurchaseMap["transactionId"] = purchase.TransactionId
 	validatedPurchaseMap["store"] = purchase.Store.String()
@@ -6265,6 +6334,7 @@ func getJsValidatedPurchaseData(purchase *api.ValidatedPurchase) map[string]inte
 	validatedPurchaseMap["createTime"] = purchase.CreateTime.Seconds
 	validatedPurchaseMap["updateTime"] = purchase.UpdateTime.Seconds
 	validatedPurchaseMap["environment"] = purchase.Environment.String()
+	validatedPurchaseMap["seenBefore"] = purchase.SeenBefore
 
 	return validatedPurchaseMap
 }

@@ -265,6 +265,7 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"friends_list":                       n.friendsList,
 		"file_read":                          n.fileRead,
 		"channel_message_send":               n.channelMessageSend,
+		"channel_message_update":             n.channelMessageUpdate,
 		"channel_id_build":                   n.channelIdBuild,
 	}
 
@@ -2195,7 +2196,7 @@ func validationToLuaTable(l *lua.LState, validation *api.ValidatePurchaseRespons
 }
 
 func purchaseToLuaTable(l *lua.LState, p *api.ValidatedPurchase) *lua.LTable {
-	validatedPurchaseTable := l.CreateTable(0, 8)
+	validatedPurchaseTable := l.CreateTable(0, 9)
 	validatedPurchaseTable.RawSetString("product_id", lua.LString(p.ProductId))
 	validatedPurchaseTable.RawSetString("transaction_id", lua.LString(p.TransactionId))
 	validatedPurchaseTable.RawSetString("store", lua.LString(p.Store.String()))
@@ -2204,6 +2205,7 @@ func purchaseToLuaTable(l *lua.LState, p *api.ValidatedPurchase) *lua.LTable {
 	validatedPurchaseTable.RawSetString("create_time", lua.LNumber(p.CreateTime.Seconds))
 	validatedPurchaseTable.RawSetString("update_time", lua.LNumber(p.UpdateTime.Seconds))
 	validatedPurchaseTable.RawSetString("environment", lua.LString(p.Environment.String()))
+	validatedPurchaseTable.RawSetString("seen_before", lua.LBool(p.SeenBefore))
 
 	return validatedPurchaseTable
 }
@@ -4312,7 +4314,7 @@ func (n *RuntimeLuaNakamaModule) walletUpdate(l *lua.LState) int {
 		}
 	}
 
-	updateLedger := l.OptBool(4, true)
+	updateLedger := l.OptBool(4, false)
 
 	results, err := UpdateWallets(l.Context(), n.logger, n.db, []*walletUpdate{{
 		UserID:    userID,
@@ -5990,7 +5992,9 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 		return 0
 	}
 
-	sortOrder := l.OptString(2, "desc")
+	authoritative := l.OptBool(2, true)
+
+	sortOrder := l.OptString(3, "desc")
 	var sortOrderNumber int
 	switch sortOrder {
 	case "asc":
@@ -5998,11 +6002,11 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 	case "desc":
 		sortOrderNumber = LeaderboardSortOrderDescending
 	default:
-		l.ArgError(2, "expects sort order to be 'asc' or 'desc'")
+		l.ArgError(3, "expects sort order to be 'asc' or 'desc'")
 		return 0
 	}
 
-	operator := l.OptString(3, "best")
+	operator := l.OptString(4, "best")
 	var operatorNumber int
 	switch operator {
 	case "best":
@@ -6014,25 +6018,25 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 	case "decr":
 		operatorNumber = LeaderboardOperatorDecrement
 	default:
-		l.ArgError(3, "expects sort order to be 'best', 'set', 'decr' or 'incr'")
+		l.ArgError(4, "expects sort order to be 'best', 'set', 'decr' or 'incr'")
 		return 0
 	}
 
-	duration := l.OptInt(4, 0)
+	duration := l.OptInt(5, 0)
 	if duration <= 0 {
-		l.ArgError(4, "duration must be > 0")
+		l.ArgError(5, "duration must be > 0")
 		return 0
 	}
 
-	resetSchedule := l.OptString(5, "")
+	resetSchedule := l.OptString(6, "")
 	if resetSchedule != "" {
 		if _, err := cronexpr.Parse(resetSchedule); err != nil {
-			l.ArgError(5, "expects reset schedule to be a valid CRON expression")
+			l.ArgError(6, "expects reset schedule to be a valid CRON expression")
 			return 0
 		}
 	}
 
-	metadata := l.OptTable(6, nil)
+	metadata := l.OptTable(7, nil)
 	metadataStr := "{}"
 	if metadata != nil {
 		metadataMap := RuntimeLuaConvertLuaTable(metadata)
@@ -6044,36 +6048,36 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 		metadataStr = string(metadataBytes)
 	}
 
-	title := l.OptString(7, "")
-	description := l.OptString(8, "")
-	category := l.OptInt(9, 0)
+	title := l.OptString(8, "")
+	description := l.OptString(9, "")
+	category := l.OptInt(10, 0)
 	if category < 0 || category >= 128 {
-		l.ArgError(9, "category must be 0-127")
+		l.ArgError(10, "category must be 0-127")
 		return 0
 	}
-	startTime := l.OptInt(10, 0)
+	startTime := l.OptInt(11, 0)
 	if startTime < 0 {
-		l.ArgError(10, "startTime must be >= 0.")
+		l.ArgError(11, "startTime must be >= 0.")
 		return 0
 	}
-	endTime := l.OptInt(11, 0)
+	endTime := l.OptInt(12, 0)
 	if endTime != 0 && endTime <= startTime {
-		l.ArgError(11, "endTime must be > startTime. Use 0 to indicate a tournament that never ends.")
+		l.ArgError(12, "endTime must be > startTime. Use 0 to indicate a tournament that never ends.")
 		return 0
 	}
-	maxSize := l.OptInt(12, 0)
+	maxSize := l.OptInt(13, 0)
 	if maxSize < 0 {
-		l.ArgError(12, "maxSize must be >= 0")
+		l.ArgError(13, "maxSize must be >= 0")
 		return 0
 	}
-	maxNumScore := l.OptInt(13, 0)
+	maxNumScore := l.OptInt(14, 0)
 	if maxNumScore < 0 {
-		l.ArgError(13, "maxNumScore must be >= 0")
+		l.ArgError(14, "maxNumScore must be >= 0")
 		return 0
 	}
-	joinRequired := l.OptBool(14, false)
+	joinRequired := l.OptBool(15, false)
 
-	if err := TournamentCreate(l.Context(), n.logger, n.leaderboardCache, n.leaderboardScheduler, id, sortOrderNumber, operatorNumber, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired); err != nil {
+	if err := TournamentCreate(l.Context(), n.logger, n.leaderboardCache, n.leaderboardScheduler, id, authoritative, sortOrderNumber, operatorNumber, resetSchedule, metadataStr, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired); err != nil {
 		l.RaiseError("error creating tournament: %v", err.Error())
 	}
 	return 0
@@ -6349,7 +6353,7 @@ func leaderboardRecordsToLua(l *lua.LState, records []*api.LeaderboardRecord, ow
 }
 
 func recordToLuaTable(l *lua.LState, record *api.LeaderboardRecord) (*lua.LTable, error) {
-	recordTable := l.CreateTable(0, 11)
+	recordTable := l.CreateTable(0, 12)
 	recordTable.RawSetString("leaderboard_id", lua.LString(record.LeaderboardId))
 	recordTable.RawSetString("owner_id", lua.LString(record.OwnerId))
 	if record.Username != nil {
@@ -6360,6 +6364,7 @@ func recordToLuaTable(l *lua.LState, record *api.LeaderboardRecord) (*lua.LTable
 	recordTable.RawSetString("score", lua.LNumber(record.Score))
 	recordTable.RawSetString("subscore", lua.LNumber(record.Subscore))
 	recordTable.RawSetString("num_score", lua.LNumber(record.NumScore))
+	recordTable.RawSetString("max_num_score", lua.LNumber(record.MaxNumScore))
 
 	metadataMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(record.Metadata), &metadataMap)
@@ -6761,7 +6766,7 @@ func (n *RuntimeLuaNakamaModule) groupUpdate(l *lua.LState) int {
 	openV := l.Get(8)
 	var open *wrapperspb.BoolValue
 	if openV != lua.LNil {
-		open = &wrapperspb.BoolValue{Value: l.OptBool(7, false)}
+		open = &wrapperspb.BoolValue{Value: l.OptBool(8, false)}
 	}
 
 	metadataTable := l.OptTable(9, nil)
@@ -7524,7 +7529,7 @@ func (n *RuntimeLuaNakamaModule) channelMessageSend(l *lua.LState) int {
 	if s != "" {
 		suid, err := uuid.FromString(s)
 		if err != nil {
-			l.ArgError(5, "expects sender id to either be not set, empty string or a valid UUID")
+			l.ArgError(3, "expects sender id to either be not set, empty string or a valid UUID")
 			return 0
 		}
 		senderID = suid.String()
@@ -7541,6 +7546,63 @@ func (n *RuntimeLuaNakamaModule) channelMessageSend(l *lua.LState) int {
 	}
 
 	ack, err := ChannelMessageSend(l.Context(), n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, contentStr, senderID, senderUsername, persist)
+	if err != nil {
+		l.RaiseError("failed to send channel message: %v", err.Error())
+		return 0
+	}
+
+	ackTable := l.CreateTable(0, 7)
+	ackTable.RawSetString("channelId", lua.LString(ack.ChannelId))
+	ackTable.RawSetString("messageId", lua.LString(ack.MessageId))
+	ackTable.RawSetString("code", lua.LNumber(ack.Code.Value))
+	ackTable.RawSetString("username", lua.LString(ack.Username))
+	ackTable.RawSetString("createTime", lua.LNumber(ack.CreateTime.Seconds))
+	ackTable.RawSetString("updateTime", lua.LNumber(ack.UpdateTime.Seconds))
+	ackTable.RawSetString("persistent", lua.LBool(ack.Persistent.Value))
+
+	l.Push(ackTable)
+	return 1
+}
+
+func (n *RuntimeLuaNakamaModule) channelMessageUpdate(l *lua.LState) int {
+	channelId := l.CheckString(1)
+
+	messageId := l.CheckString(2)
+
+	content := l.OptTable(3, nil)
+	contentStr := "{}"
+	if content != nil {
+		contentMap := RuntimeLuaConvertLuaTable(content)
+		contentBytes, err := json.Marshal(contentMap)
+		if err != nil {
+			l.RaiseError("error encoding metadata: %v", err.Error())
+			return 0
+		}
+		contentStr = string(contentBytes)
+	}
+
+	s := l.OptString(4, "")
+	senderID := uuid.Nil.String()
+	if s != "" {
+		suid, err := uuid.FromString(s)
+		if err != nil {
+			l.ArgError(4, "expects sender id to either be not set, empty string or a valid UUID")
+			return 0
+		}
+		senderID = suid.String()
+	}
+
+	senderUsername := l.OptString(5, "")
+
+	persist := l.OptBool(6, false)
+
+	channelIdToStreamResult, err := ChannelIdToStream(channelId)
+	if err != nil {
+		l.RaiseError(err.Error())
+		return 0
+	}
+
+	ack, err := ChannelMessageUpdate(l.Context(), n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, messageId, contentStr, senderID, senderUsername, persist)
 	if err != nil {
 		l.RaiseError("failed to send channel message: %v", err.Error())
 		return 0
