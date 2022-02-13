@@ -46,7 +46,7 @@ var API_PREFIX_LOWERCASE = strings.ToLower(API_PREFIX)
 var RTAPI_PREFIX_LOWERCASE = strings.ToLower(RTAPI_PREFIX)
 
 type (
-	RuntimeRpcFunction func(ctx context.Context, queryParams map[string][]string, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang, payload string) (string, error, codes.Code)
+	RuntimeRpcFunction func(ctx context.Context, headers, queryParams map[string][]string, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang, payload string) (string, error, codes.Code)
 
 	RuntimeBeforeRtFunction func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang string, envelope *rtapi.Envelope) (*rtapi.Envelope, error)
 	RuntimeAfterRtFunction  func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang string, envelope *rtapi.Envelope) error
@@ -265,12 +265,14 @@ type RuntimeMatchCore interface {
 	MatchLeave(tick int64, state interface{}, leaves []*MatchPresence) (interface{}, error)
 	MatchLoop(tick int64, state interface{}, inputCh <-chan *MatchDataMessage) (interface{}, error)
 	MatchTerminate(tick int64, state interface{}, graceSeconds int) (interface{}, error)
+	MatchSignal(tick int64, state interface{}, data string) (interface{}, string, error)
 	GetState(state interface{}) (string, error)
 	Label() string
 	TickRate() int
 	HandlerName() string
 	CreateTime() int64
 	Cancel()
+	Cleanup()
 }
 
 type RuntimeEventFunctions struct {

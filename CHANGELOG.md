@@ -3,8 +3,56 @@ All notable changes to this project are documented below.
 
 The format is based on [keep a changelog](http://keepachangelog.com) and this project uses [semantic versioning](http://semver.org).
 
-## [Unreleased]
+## [3.10.0] - 2021-12-16
+### Added
+- Add ctx field to access http request headers in the runtimes.
+- New JS runtime stringToBinary and binaryToString functions.
+- New configuration option for frequency of database DNS change scans.
 
+### Changed
+- Set JavaScript runtime custom error message as the returned payload message in RPC requests.
+- JavaScript runtime match data changed to use Uint8Array type.
+- Update Tally, and transitive dependencies to resolve dynamic linker error in xxhash package.
+- Build with Go 1.17.5 release.
+
+### Fixed
+- Gracefully close Lua matches when call queue fills up.
+- Better handling for Lua runtime wallet update operation errors.
+- Fix handling of leaderboard record writes that do not need to update the database.
+- Fix parsing edge case in TypeScript/JavaScript runtime storage delete operations.
+- Better handling of leaderboard and tournament score submissions that result in no score change.
+- Named match creation now returns existing presences if the name mapped to an existing match.
+
+## [3.9.0] - 2021-10-29
+### Added
+- Allow creation of relayed matches with a name. Names will be mapped to match identifiers.
+- Expose Nakama errors to the server runtime.
+- The wallet ledger view in the Nakama Console now supports pagination.
+
+### Changed
+- Periodically check database hostname for underlying address changes more frequently.
+- Upgrade GRPC, GRPC-Gateway, Protobuf, PGX, and other dependencies.
+
+### Fixed
+- Fix optimistic email imports when linking social profiles.
+- Fix error on API group update name already taken.
+
+## [3.8.0] - 2021-10-15
+### Added
+- Add final notification sent to sockets closed via single socket option.
+- Add match signal function to server framework.
+- Add node status icons to the console dashboard.
+
+### Changed
+- Build with Go 1.17.2 release.
+- Match handlers are now required to implement a signal handler function.
+
+  Match signals allow the match handler to be sent a reservation signal to mark a user ID or session ID into the match state ahead of their join attempt and eventual join flow. This is useful to apply reservations to a matchmaking system with Nakama's matchmaker or match listings APIs.
+
+- Log status follow missing users at debug instead of warn level.
+
+### Fixed
+- Fix input validation edge case in group listing operations.
 
 ## [3.7.0] - 2021-09-28
 ### Added
