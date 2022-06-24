@@ -109,13 +109,13 @@ func (ri *RuntimeGoInitializer) RegisterBeforeRt(id string, fn func(ctx context.
 	return nil
 }
 
-func (ri *RuntimeGoInitializer) RegisterAfterRt(id string, fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, envelope *rtapi.Envelope) error) error {
+func (ri *RuntimeGoInitializer) RegisterAfterRt(id string, fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, out, in *rtapi.Envelope) error) error {
 	apiID := strings.ToLower(id)
 	id = strings.ToLower(RTAPI_PREFIX) + apiID
-	ri.afterRt[id] = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang string, envelope *rtapi.Envelope) error {
+	ri.afterRt[id] = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, sessionID, clientIP, clientPort, lang string, out, in *rtapi.Envelope) error {
 		ctx = NewRuntimeGoContext(ctx, ri.node, ri.env, RuntimeExecutionModeAfter, nil, nil, expiry, userID, username, vars, sessionID, clientIP, clientPort, lang)
 		loggerFields := map[string]interface{}{"api_id": apiID, "mode": RuntimeExecutionModeAfter.String()}
-		return fn(ctx, ri.logger.WithFields(loggerFields), ri.db, ri.nk, envelope)
+		return fn(ctx, ri.logger.WithFields(loggerFields), ri.db, ri.nk, out, in)
 	}
 	return nil
 }
@@ -1560,10 +1560,10 @@ func (ri *RuntimeGoInitializer) RegisterAfterListNotifications(fn func(ctx conte
 	return nil
 }
 
-func (ri *RuntimeGoInitializer) RegisterBeforeDeleteNotification(fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, in *api.DeleteNotificationsRequest) (*api.DeleteNotificationsRequest, error)) error {
-	ri.beforeReq.beforeDeleteNotificationFunction = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, clientIP, clientPort string, in *api.DeleteNotificationsRequest) (*api.DeleteNotificationsRequest, error, codes.Code) {
+func (ri *RuntimeGoInitializer) RegisterBeforeDeleteNotifications(fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, in *api.DeleteNotificationsRequest) (*api.DeleteNotificationsRequest, error)) error {
+	ri.beforeReq.beforeDeleteNotificationsFunction = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, clientIP, clientPort string, in *api.DeleteNotificationsRequest) (*api.DeleteNotificationsRequest, error, codes.Code) {
 		ctx = NewRuntimeGoContext(ctx, ri.node, ri.env, RuntimeExecutionModeBefore, nil, nil, expiry, userID, username, vars, "", clientIP, clientPort, "")
-		loggerFields := map[string]interface{}{"api_id": "deletenotification", "mode": RuntimeExecutionModeBefore.String()}
+		loggerFields := map[string]interface{}{"api_id": "deletenotifications", "mode": RuntimeExecutionModeBefore.String()}
 		result, fnErr := fn(ctx, ri.logger.WithFields(loggerFields), ri.db, ri.nk, in)
 		if fnErr != nil {
 			if runtimeErr, ok := fnErr.(*runtime.Error); ok {
@@ -1581,10 +1581,10 @@ func (ri *RuntimeGoInitializer) RegisterBeforeDeleteNotification(fn func(ctx con
 	return nil
 }
 
-func (ri *RuntimeGoInitializer) RegisterAfterDeleteNotification(fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, in *api.DeleteNotificationsRequest) error) error {
-	ri.afterReq.afterDeleteNotificationFunction = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, clientIP, clientPort string, in *api.DeleteNotificationsRequest) error {
+func (ri *RuntimeGoInitializer) RegisterAfterDeleteNotifications(fn func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, in *api.DeleteNotificationsRequest) error) error {
+	ri.afterReq.afterDeleteNotificationsFunction = func(ctx context.Context, logger *zap.Logger, userID, username string, vars map[string]string, expiry int64, clientIP, clientPort string, in *api.DeleteNotificationsRequest) error {
 		ctx = NewRuntimeGoContext(ctx, ri.node, ri.env, RuntimeExecutionModeAfter, nil, nil, expiry, userID, username, vars, "", clientIP, clientPort, "")
-		loggerFields := map[string]interface{}{"api_id": "deletenotification", "mode": RuntimeExecutionModeAfter.String()}
+		loggerFields := map[string]interface{}{"api_id": "deletenotifications", "mode": RuntimeExecutionModeAfter.String()}
 		return fn(ctx, ri.logger.WithFields(loggerFields), ri.db, ri.nk, in)
 	}
 	return nil
@@ -2327,11 +2327,11 @@ func (ri *RuntimeGoInitializer) RegisterMatch(name string, fn func(ctx context.C
 	return nil
 }
 
-func NewRuntimeProviderGo(ctx context.Context, logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, rootPath string, paths []string, eventQueue *RuntimeEventQueue, matchProvider *MatchProvider) ([]string, map[string]RuntimeRpcFunction, map[string]RuntimeBeforeRtFunction, map[string]RuntimeAfterRtFunction, *RuntimeBeforeReqFunctions, *RuntimeAfterReqFunctions, RuntimeMatchmakerMatchedFunction, RuntimeTournamentEndFunction, RuntimeTournamentResetFunction, RuntimeLeaderboardResetFunction, *RuntimeEventFunctions, func() []string, error) {
+func NewRuntimeProviderGo(ctx context.Context, logger, startupLogger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, rootPath string, paths []string, eventQueue *RuntimeEventQueue, matchProvider *MatchProvider) ([]string, map[string]RuntimeRpcFunction, map[string]RuntimeBeforeRtFunction, map[string]RuntimeAfterRtFunction, *RuntimeBeforeReqFunctions, *RuntimeAfterReqFunctions, RuntimeMatchmakerMatchedFunction, RuntimeTournamentEndFunction, RuntimeTournamentResetFunction, RuntimeLeaderboardResetFunction, *RuntimeEventFunctions, func() []string, error) {
 	runtimeLogger := NewRuntimeGoLogger(logger)
 	node := config.GetName()
 	env := config.GetRuntime().Environment
-	nk := NewRuntimeGoNakamaModule(logger, db, protojsonMarshaler, config, socialClient, leaderboardCache, leaderboardRankCache, leaderboardScheduler, sessionRegistry, sessionCache, matchRegistry, tracker, metrics, streamManager, router)
+	nk := NewRuntimeGoNakamaModule(logger, db, protojsonMarshaler, config, socialClient, leaderboardCache, leaderboardRankCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router)
 
 	match := make(map[string]func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule) (runtime.Match, error), 0)
 
