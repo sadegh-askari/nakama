@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/heroiclabs/nakama-common/runtime"
 	"strconv"
 	"time"
 
@@ -33,8 +34,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
-
-var ErrFriendInvalidCursor = errors.New("friend cursor invalid")
 
 type edgeListCursor struct {
 	// ID fields.
@@ -86,21 +85,21 @@ FROM users, user_edge WHERE id = destination_id AND source_id = $1`
 	return &api.FriendList{Friends: friends}, nil
 }
 
-func ListFriends(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, userID uuid.UUID, limit int, state *wrapperspb.Int32Value, cursor string) (*api.FriendList, error) {
+func ListFriends(ctx context.Context, logger *zap.Logger, db *sql.DB, statusRegistry *StatusRegistry, userID uuid.UUID, limit int, state *wrapperspb.Int32Value, cursor string) (*api.FriendList, error) {
 	var incomingCursor *edgeListCursor
 	if cursor != "" {
 		cb, err := base64.StdEncoding.DecodeString(cursor)
 		if err != nil {
-			return nil, ErrFriendInvalidCursor
+			return nil, runtime.ErrFriendInvalidCursor
 		}
 		incomingCursor = &edgeListCursor{}
 		if err := gob.NewDecoder(bytes.NewReader(cb)).Decode(incomingCursor); err != nil {
-			return nil, ErrFriendInvalidCursor
+			return nil, runtime.ErrFriendInvalidCursor
 		}
 
 		// Cursor and filter mismatch. Perhaps the caller has sent an old cursor with a changed filter.
 		if state != nil && int64(state.Value) != incomingCursor.State {
-			return nil, ErrFriendInvalidCursor
+			return nil, runtime.ErrFriendInvalidCursor
 		}
 	}
 
@@ -179,24 +178,18 @@ FROM users, user_edge WHERE id = destination_id AND source_id = $1`
 			break
 		}
 
-		friendID := uuid.FromStringOrNil(id)
-		online := false
-		if tracker != nil {
-			online = tracker.StreamExists(PresenceStream{Mode: StreamModeStatus, Subject: friendID})
-		}
-
 		user := &api.User{
-			Id:                    friendID.String(),
-			Username:              username.String,
-			DisplayName:           displayName.String,
-			AvatarUrl:             avatarURL.String,
-			LangTag:               lang.String,
-			Location:              location.String,
-			Timezone:              timezone.String,
-			Metadata:              string(metadata),
-			CreateTime:            &timestamppb.Timestamp{Seconds: createTime.Time.Unix()},
-			UpdateTime:            &timestamppb.Timestamp{Seconds: updateTime.Time.Unix()},
-			Online:                online,
+			Id:          id,
+			Username:    username.String,
+			DisplayName: displayName.String,
+			AvatarUrl:   avatarURL.String,
+			LangTag:     lang.String,
+			Location:    location.String,
+			Timezone:    timezone.String,
+			Metadata:    string(metadata),
+			CreateTime:  &timestamppb.Timestamp{Seconds: createTime.Time.Unix()},
+			UpdateTime:  &timestamppb.Timestamp{Seconds: updateTime.Time.Unix()},
+			// Online filled below.
 			FacebookId:            facebookID.String,
 			GoogleId:              googleID.String,
 			GamecenterId:          gamecenterID.String,
@@ -216,6 +209,10 @@ FROM users, user_edge WHERE id = destination_id AND source_id = $1`
 	if err = rows.Err(); err != nil {
 		logger.Error("Error retrieving friends.", zap.Error(err))
 		return nil, err
+	}
+
+	if statusRegistry != nil {
+		statusRegistry.FillOnlineFriends(friends)
 	}
 
 	return &api.FriendList{Friends: friends, Cursor: outgoingCursor}, nil

@@ -113,7 +113,8 @@ func (d *DummySession) SendBytes(payload []byte, reliable bool) error {
 	return nil
 }
 
-func (d *DummySession) Close(msg string, reason runtime.PresenceReason) {}
+func (d *DummySession) Close(msg string, reason runtime.PresenceReason, envelopes ...*rtapi.Envelope) {
+}
 
 type loggerEnabler struct{}
 
@@ -172,7 +173,7 @@ func NewAPIServer(t *testing.T, runtime *Runtime) (*ApiServer, *Pipeline) {
 	router := &DummyMessageRouter{}
 	tracker := &LocalTracker{}
 	pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, nil, nil, nil, nil, nil, tracker, router, runtime)
-	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, tracker, router, metrics, pipeline, runtime)
+	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime)
 	return apiServer, pipeline
 }
 
