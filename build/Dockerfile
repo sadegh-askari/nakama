@@ -27,7 +27,7 @@ ENV RUSTFLAGS='-C linker=x86_64-linux-gnu-gcc'
 
 RUN apt-get update && \
     apt-get -y upgrade && \
-    apt-get install -y --no-install-recommends ca-certificates gcc-x86-64-linux-gnu libc6-dev git && \
+    apt-get install -y --no-install-recommends ca-certificates gcc-x86-64-linux-gnu libc6-dev-amd64-cross git && \
     git config --global advice.detachedHead false && \
     git clone --quiet --no-checkout https://github.com/sadegh-askari/nakama /go/build/nakama
 
