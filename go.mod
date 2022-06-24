@@ -76,4 +76,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
 
-replace github.com/heroiclabs/nakama-common v1.21.0 => github.com/mnarimani/nakama-common v1.21.0.1
+replace github.com/heroiclabs/nakama-common v1.23.0 => github.com/sadegh-askari/nakama-common v1.23.1
