@@ -21,9 +21,8 @@ ARG commit
 ARG version
 
 ENV GOOS linux
-ENV GOARCH amd64
+ENV GOARCH arm64
 ENV CGO_ENABLED 1
-ENV RUSTFLAGS='-C linker=x86_64-linux-gnu-gcc'
 
 RUN apt-get update && \
     apt-get -y upgrade && \
