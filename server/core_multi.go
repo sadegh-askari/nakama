@@ -189,7 +189,7 @@ func MultiUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Me
 	return storageWriteAcks, walletUpdateResults, nil
 }
 
-func MultiUpdateTx(ctx context.Context, logger *zap.Logger, tx *sql.Tx, accountUpdates []*accountUpdate, storageWrites StorageOpWrites, walletUpdates []*walletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
+func MultiUpdateTx(ctx context.Context, logger *zap.Logger, tx *sql.Tx, metrics Metrics, accountUpdates []*accountUpdate, storageWrites StorageOpWrites, walletUpdates []*walletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
 	if len(accountUpdates) == 0 && len(storageWrites) == 0 && len(walletUpdates) == 0 {
 		return nil, nil, nil
 	}
@@ -204,7 +204,7 @@ func MultiUpdateTx(ctx context.Context, logger *zap.Logger, tx *sql.Tx, accountU
 	}
 
 	// Execute any storage updates.
-	storageWriteAcks, updateErr = storageWriteObjects(ctx, logger, tx, true, storageWrites)
+	storageWriteAcks, updateErr = storageWriteObjects(ctx, logger, metrics, tx, true, storageWrites)
 	if updateErr != nil {
 		return nil, nil, updateErr
 	}

@@ -2062,7 +2062,7 @@ func (n *RuntimeGoNakamaModule) MultiUpdateTx(ctx context.Context, tx *sql.Tx, a
 		return nil, nil, err
 	}
 
-	return MultiUpdateTx(ctx, n.logger, tx, accountUpdateOps, storageWriteOps, walletUpdateOps, updateLedger)
+	return MultiUpdateTx(ctx, n.logger, tx, n.metrics, accountUpdateOps, storageWriteOps, walletUpdateOps, updateLedger)
 }
 
 // @group leaderboards
