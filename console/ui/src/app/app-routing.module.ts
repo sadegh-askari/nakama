@@ -33,7 +33,7 @@ import {FriendsComponent, FriendsResolver} from './account/friends/friends.compo
 import {GroupsComponent, GroupsResolver} from './account/groups/groups.component';
 import {GroupDetailsComponent} from './group/details/groupDetailsComponent';
 import {GroupMembersComponent, GroupMembersResolver} from './group/members/groupMembers.component';
-import {MatchesComponent, MatchesResolver} from './matches/matches.component';
+import {MatchesComponent, MatchesResolver, NodesResolver} from './matches/matches.component';
 import {GroupListComponent, GroupSearchResolver} from './groups/groups.component';
 import {GroupComponent, GroupResolver} from './group/group.component';
 import {LeaderboardComponent, LeaderboardResolver} from './leaderboard/leaderboard.component';
@@ -41,6 +41,7 @@ import {LeaderboardDetailsComponent} from './leaderboard/details/details.compone
 import {LeaderboardRecordsComponent, LeaderboardRecordsResolver} from './leaderboard/records/records.component';
 import {ApiExplorerComponent, ApiExplorerEndpointsResolver} from './apiexplorer/apiexplorer.component';
 import {PurchasesComponent, PurchasesResolver} from './account/purchases/purchases.component';
+import {ChatListComponent, ChatSearchResolver} from "./channels/chatMessages.component";
 import {SubscriptionsComponent, SubscriptionsResolver} from './account/subscriptions/subscriptions.component';
 
 const routes: Routes = [
@@ -65,7 +66,7 @@ const routes: Routes = [
           {path: 'records', component: LeaderboardRecordsComponent, resolve: [LeaderboardRecordsResolver]},
         ]
       },
-      {path: 'matches', component: MatchesComponent, resolve: [MatchesResolver]},
+      {path: 'matches', component: MatchesComponent, resolve: [MatchesResolver, NodesResolver]},
       {path: 'groups', component: GroupListComponent, resolve: [GroupSearchResolver]},
       {
         path: 'groups/:id', component: GroupComponent, resolve: [GroupResolver],
@@ -90,6 +91,7 @@ const routes: Routes = [
         ]
       },
       {path: 'apiexplorer', component: ApiExplorerComponent, resolve: [ApiExplorerEndpointsResolver]},
+      {path: 'chat', component: ChatListComponent, resolve: [ChatSearchResolver]}
     ]},
   {path: 'login', component: LoginComponent, canActivate: [LoginGuard]},
 

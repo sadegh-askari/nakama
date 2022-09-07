@@ -104,12 +104,13 @@ func TournamentAddAttempt(ctx context.Context, logger *zap.Logger, db *sql.DB, c
 		return runtime.ErrTournamentNotFound
 	}
 
-	expiryTime := int64(0)
-	if leaderboard.ResetSchedule != nil {
-		expiryTime = leaderboard.ResetSchedule.Next(time.Now().UTC()).UTC().Unix()
-		if leaderboard.EndTime > 0 && expiryTime > leaderboard.EndTime {
-			expiryTime = leaderboard.EndTime
-		}
+	nowTime := time.Now().UTC()
+	nowUnix := nowTime.Unix()
+
+	_, endActive, expiryTime := calculateTournamentDeadlines(leaderboard.StartTime, leaderboard.EndTime, int64(leaderboard.Duration), leaderboard.ResetSchedule, nowTime)
+	if endActive <= nowUnix {
+		logger.Info("Cannot add attempt outside of tournament duration.")
+		return runtime.ErrTournamentOutsideDuration
 	}
 
 	query := `UPDATE leaderboard_record SET max_num_score = (max_num_score + $1) WHERE leaderboard_id = $2 AND owner_id = $3 AND expiry_time = $4`
@@ -361,7 +362,7 @@ func TournamentList(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderb
 		if startActive > nowUnix || endActiveUnix < nowUnix {
 			canEnter = false
 		}
-		if canEnter && (!leaderboard.HasMaxSize() || size >= leaderboard.MaxSize) {
+		if canEnter && size >= leaderboard.MaxSize {
 			canEnter = false
 		}
 
@@ -663,7 +664,7 @@ func TournamentRecordWrite(ctx context.Context, logger *zap.Logger, db *sql.DB, 
 	return record, nil
 }
 
-func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardId string, ownerId uuid.UUID, limit int, expiryOverride int64) ([]*api.LeaderboardRecord, error) {
+func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.DB, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardId, cursor string, ownerId uuid.UUID, limit int, expiryOverride int64) (*api.TournamentRecordList, error) {
 	leaderboard := leaderboardCache.Get(leaderboardId)
 	if leaderboard == nil || !leaderboard.IsTournament() {
 		return nil, ErrLeaderboardNotFound
@@ -677,12 +678,20 @@ func TournamentRecordsHaystack(ctx context.Context, logger *zap.Logger, db *sql.
 		_, _, expiry = calculateTournamentDeadlines(leaderboard.StartTime, leaderboard.EndTime, int64(leaderboard.Duration), leaderboard.ResetSchedule, now)
 		if expiry != 0 && expiry <= now.Unix() {
 			// if the expiry time is in the past, we wont have any records to return
-			return make([]*api.LeaderboardRecord, 0), nil
+			return &api.TournamentRecordList{Records: []*api.LeaderboardRecord{}}, nil
 		}
 	}
 
 	expiryTime := time.Unix(expiry, 0).UTC()
-	return getLeaderboardRecordsHaystack(ctx, logger, db, rankCache, ownerId, limit, leaderboard.Id, sortOrder, expiryTime)
+
+	results, err := getLeaderboardRecordsHaystack(ctx, logger, db, leaderboardCache, rankCache, ownerId, limit, leaderboard.Id, cursor, sortOrder, expiryTime)
+	if err != nil {
+		return nil, err
+	}
+
+	tournamentRecordList := &api.TournamentRecordList{Records: results.Records, NextCursor: results.NextCursor, PrevCursor: results.NextCursor}
+
+	return tournamentRecordList, nil
 }
 
 func calculateTournamentDeadlines(startTime, endTime, duration int64, resetSchedule *cronexpr.Expression, t time.Time) (int64, int64, int64) {

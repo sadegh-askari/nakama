@@ -22,6 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 type ConsoleClient interface {
 	// Authenticate a console user with username and password.
 	Authenticate(ctx context.Context, in *AuthenticateRequest, opts ...grpc.CallOption) (*ConsoleSession, error)
+	// Log out a session and invalidate the session token.
+	AuthenticateLogout(ctx context.Context, in *AuthenticateLogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Add a new console user.
 	AddUser(ctx context.Context, in *AddUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Ban a user.
@@ -34,6 +36,8 @@ type ConsoleClient interface {
 	DeleteAllData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Delete all information stored for a user account.
 	DeleteAccount(ctx context.Context, in *AccountDeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Delete messages.
+	DeleteChannelMessages(ctx context.Context, in *DeleteChannelMessagesRequest, opts ...grpc.CallOption) (*DeleteChannelMessagesResponse, error)
 	// Delete the friend relationship between two users.
 	DeleteFriend(ctx context.Context, in *DeleteFriendRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Remove a group.
@@ -96,10 +100,12 @@ type ConsoleClient interface {
 	ListStorageCollections(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StorageCollectionsList, error)
 	// List (and optionally filter) accounts.
 	ListAccounts(ctx context.Context, in *ListAccountsRequest, opts ...grpc.CallOption) (*AccountList, error)
+	// List channel messages with the selected filter
+	ListChannelMessages(ctx context.Context, in *ListChannelMessagesRequest, opts ...grpc.CallOption) (*api.ChannelMessageList, error)
 	// List (and optionally filter) groups.
 	ListGroups(ctx context.Context, in *ListGroupsRequest, opts ...grpc.CallOption) (*GroupList, error)
 	// List ongoing matches
-	ListMatches(ctx context.Context, in *api.ListMatchesRequest, opts ...grpc.CallOption) (*api.MatchList, error)
+	ListMatches(ctx context.Context, in *ListMatchesRequest, opts ...grpc.CallOption) (*MatchList, error)
 	// List validated purchases
 	ListPurchases(ctx context.Context, in *ListPurchasesRequest, opts ...grpc.CallOption) (*api.PurchaseList, error)
 	// List validated subscriptions
@@ -147,6 +153,15 @@ func NewConsoleClient(cc grpc.ClientConnInterface) ConsoleClient {
 func (c *consoleClient) Authenticate(ctx context.Context, in *AuthenticateRequest, opts ...grpc.CallOption) (*ConsoleSession, error) {
 	out := new(ConsoleSession)
 	err := c.cc.Invoke(ctx, "/nakama.console.Console/Authenticate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) AuthenticateLogout(ctx context.Context, in *AuthenticateLogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/nakama.console.Console/AuthenticateLogout", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +216,15 @@ func (c *consoleClient) DeleteAllData(ctx context.Context, in *emptypb.Empty, op
 func (c *consoleClient) DeleteAccount(ctx context.Context, in *AccountDeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/nakama.console.Console/DeleteAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteChannelMessages(ctx context.Context, in *DeleteChannelMessagesRequest, opts ...grpc.CallOption) (*DeleteChannelMessagesResponse, error) {
+	out := new(DeleteChannelMessagesResponse)
+	err := c.cc.Invoke(ctx, "/nakama.console.Console/DeleteChannelMessages", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -486,6 +510,15 @@ func (c *consoleClient) ListAccounts(ctx context.Context, in *ListAccountsReques
 	return out, nil
 }
 
+func (c *consoleClient) ListChannelMessages(ctx context.Context, in *ListChannelMessagesRequest, opts ...grpc.CallOption) (*api.ChannelMessageList, error) {
+	out := new(api.ChannelMessageList)
+	err := c.cc.Invoke(ctx, "/nakama.console.Console/ListChannelMessages", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *consoleClient) ListGroups(ctx context.Context, in *ListGroupsRequest, opts ...grpc.CallOption) (*GroupList, error) {
 	out := new(GroupList)
 	err := c.cc.Invoke(ctx, "/nakama.console.Console/ListGroups", in, out, opts...)
@@ -495,8 +528,8 @@ func (c *consoleClient) ListGroups(ctx context.Context, in *ListGroupsRequest, o
 	return out, nil
 }
 
-func (c *consoleClient) ListMatches(ctx context.Context, in *api.ListMatchesRequest, opts ...grpc.CallOption) (*api.MatchList, error) {
-	out := new(api.MatchList)
+func (c *consoleClient) ListMatches(ctx context.Context, in *ListMatchesRequest, opts ...grpc.CallOption) (*MatchList, error) {
+	out := new(MatchList)
 	err := c.cc.Invoke(ctx, "/nakama.console.Console/ListMatches", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -663,6 +696,8 @@ func (c *consoleClient) WriteStorageObject(ctx context.Context, in *WriteStorage
 type ConsoleServer interface {
 	// Authenticate a console user with username and password.
 	Authenticate(context.Context, *AuthenticateRequest) (*ConsoleSession, error)
+	// Log out a session and invalidate the session token.
+	AuthenticateLogout(context.Context, *AuthenticateLogoutRequest) (*emptypb.Empty, error)
 	// Add a new console user.
 	AddUser(context.Context, *AddUserRequest) (*emptypb.Empty, error)
 	// Ban a user.
@@ -675,6 +710,8 @@ type ConsoleServer interface {
 	DeleteAllData(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// Delete all information stored for a user account.
 	DeleteAccount(context.Context, *AccountDeleteRequest) (*emptypb.Empty, error)
+	// Delete messages.
+	DeleteChannelMessages(context.Context, *DeleteChannelMessagesRequest) (*DeleteChannelMessagesResponse, error)
 	// Delete the friend relationship between two users.
 	DeleteFriend(context.Context, *DeleteFriendRequest) (*emptypb.Empty, error)
 	// Remove a group.
@@ -737,10 +774,12 @@ type ConsoleServer interface {
 	ListStorageCollections(context.Context, *emptypb.Empty) (*StorageCollectionsList, error)
 	// List (and optionally filter) accounts.
 	ListAccounts(context.Context, *ListAccountsRequest) (*AccountList, error)
+	// List channel messages with the selected filter
+	ListChannelMessages(context.Context, *ListChannelMessagesRequest) (*api.ChannelMessageList, error)
 	// List (and optionally filter) groups.
 	ListGroups(context.Context, *ListGroupsRequest) (*GroupList, error)
 	// List ongoing matches
-	ListMatches(context.Context, *api.ListMatchesRequest) (*api.MatchList, error)
+	ListMatches(context.Context, *ListMatchesRequest) (*MatchList, error)
 	// List validated purchases
 	ListPurchases(context.Context, *ListPurchasesRequest) (*api.PurchaseList, error)
 	// List validated subscriptions
@@ -785,6 +824,9 @@ type UnimplementedConsoleServer struct {
 func (UnimplementedConsoleServer) Authenticate(context.Context, *AuthenticateRequest) (*ConsoleSession, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
 }
+func (UnimplementedConsoleServer) AuthenticateLogout(context.Context, *AuthenticateLogoutRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateLogout not implemented")
+}
 func (UnimplementedConsoleServer) AddUser(context.Context, *AddUserRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddUser not implemented")
 }
@@ -802,6 +844,9 @@ func (UnimplementedConsoleServer) DeleteAllData(context.Context, *emptypb.Empty)
 }
 func (UnimplementedConsoleServer) DeleteAccount(context.Context, *AccountDeleteRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedConsoleServer) DeleteChannelMessages(context.Context, *DeleteChannelMessagesRequest) (*DeleteChannelMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteChannelMessages not implemented")
 }
 func (UnimplementedConsoleServer) DeleteFriend(context.Context, *DeleteFriendRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFriend not implemented")
@@ -896,10 +941,13 @@ func (UnimplementedConsoleServer) ListStorageCollections(context.Context, *empty
 func (UnimplementedConsoleServer) ListAccounts(context.Context, *ListAccountsRequest) (*AccountList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
 }
+func (UnimplementedConsoleServer) ListChannelMessages(context.Context, *ListChannelMessagesRequest) (*api.ChannelMessageList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListChannelMessages not implemented")
+}
 func (UnimplementedConsoleServer) ListGroups(context.Context, *ListGroupsRequest) (*GroupList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGroups not implemented")
 }
-func (UnimplementedConsoleServer) ListMatches(context.Context, *api.ListMatchesRequest) (*api.MatchList, error) {
+func (UnimplementedConsoleServer) ListMatches(context.Context, *ListMatchesRequest) (*MatchList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListMatches not implemented")
 }
 func (UnimplementedConsoleServer) ListPurchases(context.Context, *ListPurchasesRequest) (*api.PurchaseList, error) {
@@ -980,6 +1028,24 @@ func _Console_Authenticate_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).Authenticate(ctx, req.(*AuthenticateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_AuthenticateLogout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateLogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).AuthenticateLogout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nakama.console.Console/AuthenticateLogout",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).AuthenticateLogout(ctx, req.(*AuthenticateLogoutRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1088,6 +1154,24 @@ func _Console_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).DeleteAccount(ctx, req.(*AccountDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteChannelMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteChannelMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteChannelMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nakama.console.Console/DeleteChannelMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteChannelMessages(ctx, req.(*DeleteChannelMessagesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1650,6 +1734,24 @@ func _Console_ListAccounts_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_ListChannelMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListChannelMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ListChannelMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nakama.console.Console/ListChannelMessages",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ListChannelMessages(ctx, req.(*ListChannelMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Console_ListGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListGroupsRequest)
 	if err := dec(in); err != nil {
@@ -1669,7 +1771,7 @@ func _Console_ListGroups_Handler(srv interface{}, ctx context.Context, dec func(
 }
 
 func _Console_ListMatches_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(api.ListMatchesRequest)
+	in := new(ListMatchesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1681,7 +1783,7 @@ func _Console_ListMatches_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/nakama.console.Console/ListMatches",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConsoleServer).ListMatches(ctx, req.(*api.ListMatchesRequest))
+		return srv.(ConsoleServer).ListMatches(ctx, req.(*ListMatchesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2004,6 +2106,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Console_Authenticate_Handler,
 		},
 		{
+			MethodName: "AuthenticateLogout",
+			Handler:    _Console_AuthenticateLogout_Handler,
+		},
+		{
 			MethodName: "AddUser",
 			Handler:    _Console_AddUser_Handler,
 		},
@@ -2026,6 +2132,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteAccount",
 			Handler:    _Console_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "DeleteChannelMessages",
+			Handler:    _Console_DeleteChannelMessages_Handler,
 		},
 		{
 			MethodName: "DeleteFriend",
@@ -2150,6 +2260,10 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAccounts",
 			Handler:    _Console_ListAccounts_Handler,
+		},
+		{
+			MethodName: "ListChannelMessages",
+			Handler:    _Console_ListChannelMessages_Handler,
 		},
 		{
 			MethodName: "ListGroups",

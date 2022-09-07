@@ -228,6 +228,7 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"notification_send":                  n.notificationSend,
 		"notifications_send":                 n.notificationsSend,
 		"notification_send_all":              n.notificationSendAll,
+		"notifications_delete":               n.notificationsDelete,
 		"wallet_update":                      n.walletUpdate,
 		"wallets_update":                     n.walletsUpdate,
 		"wallet_ledger_update":               n.walletLedgerUpdate,
@@ -4587,7 +4588,7 @@ func (n *RuntimeLuaNakamaModule) matchGet(l *lua.LState) int {
 	// Parse match ID.
 	id := l.CheckString(1)
 
-	result, err := n.matchRegistry.GetMatch(l.Context(), id)
+	result, _, err := n.matchRegistry.GetMatch(l.Context(), id)
 	if err != nil {
 		l.RaiseError(fmt.Sprintf("failed to get match: %s", err.Error()))
 		return 0
@@ -4626,7 +4627,7 @@ func (n *RuntimeLuaNakamaModule) matchGet(l *lua.LState) int {
 // @summary Allow the match handler to be sent a reservation signal to mark a user ID or session ID into the match state ahead of their join attempt and eventual join flow. Called when the match handler receives a runtime signal.
 // @param id(type=string) The user ID or session ID to send a reservation signal for.
 // @param data(type=string) An arbitrary input supplied by the runtime caller of the signal.
-// @return state(Opt any) An (optionally) updated state. May be any non-nil value, or nil to end the match.
+// @return state(any) An (optionally) updated state. May be any non-nil value, or nil to end the match.
 // @return data(string) Arbitrary data to return to the runtime caller of the signal. May be a string or nil.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) matchSignal(l *lua.LState) int {
@@ -4708,7 +4709,7 @@ func (n *RuntimeLuaNakamaModule) matchList(l *lua.LState) int {
 		query = &wrapperspb.StringValue{Value: lua.LVAsString(v)}
 	}
 
-	results, err := n.matchRegistry.ListMatches(l.Context(), limit, authoritative, label, minSize, maxSize, query)
+	results, _, err := n.matchRegistry.ListMatches(l.Context(), limit, authoritative, label, minSize, maxSize, query, nil)
 	if err != nil {
 		l.RaiseError(fmt.Sprintf("failed to list matches: %s", err.Error()))
 		return 0
@@ -5018,6 +5019,104 @@ func (n *RuntimeLuaNakamaModule) notificationSendAll(l *lua.LState) int {
 	return 0
 }
 
+// @group notifications
+// @summary Delete one or more in-app notifications.
+// @param notifications(type=table) A list of notifications to be deleted.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) notificationsDelete(l *lua.LState) int {
+	notificationsTable := l.CheckTable(1)
+	if notificationsTable == nil {
+		l.ArgError(1, "expects a valid set of notifications")
+		return 0
+	}
+
+	conversionError := false
+	notifications := make(map[uuid.UUID][]string)
+	notificationsTable.ForEach(func(i lua.LValue, g lua.LValue) {
+		if conversionError {
+			return
+		}
+
+		notificationTable, ok := g.(*lua.LTable)
+		if !ok {
+			conversionError = true
+			l.ArgError(1, "expects a valid set of notifications")
+			return
+		}
+
+		userID := uuid.Nil
+		notificationIDStr := ""
+		notificationTable.ForEach(func(k, v lua.LValue) {
+			if conversionError {
+				return
+			}
+
+			switch k.String() {
+			case "user_id":
+				if v.Type() != lua.LTString {
+					conversionError = true
+					l.ArgError(1, "expects user_id to be string")
+					return
+				}
+				u := v.String()
+				if u == "" {
+					l.ArgError(1, "expects user_id to be a valid UUID")
+					return
+				}
+				uid, err := uuid.FromString(u)
+				if err != nil {
+					l.ArgError(1, "expects user_id to be a valid UUID")
+					return
+				}
+				userID = uid
+			case "notification_id":
+				if v.Type() == lua.LTNil {
+					return
+				}
+				if v.Type() != lua.LTString {
+					conversionError = true
+					l.ArgError(1, "expects notification_id to be string")
+					return
+				}
+				u := v.String()
+				if u == "" {
+					l.ArgError(1, "expects notification_id to be a valid UUID")
+					return
+				}
+				_, err := uuid.FromString(u)
+				if err != nil {
+					l.ArgError(1, "expects notification_id to be a valid UUID")
+					return
+				}
+				notificationIDStr = u
+			}
+		})
+
+		if conversionError {
+			return
+		}
+
+		no := notifications[userID]
+		if no == nil {
+			no = make([]string, 0, 1)
+		}
+		no = append(no, notificationIDStr)
+		notifications[userID] = no
+	})
+
+	if conversionError {
+		return 0
+	}
+
+	for uid, notificationIDs := range notifications {
+		if err := NotificationDelete(l.Context(), n.logger, n.db, uid, notificationIDs); err != nil {
+			l.RaiseError(fmt.Sprintf("failed to delete notifications: %s", err.Error()))
+		}
+	}
+
+	return 0
+}
+
 // @group wallets
 // @summary Update a user's wallet with the given changeset.
 // @param userId(type=string) The ID of the user whose wallet to update.
@@ -5282,9 +5381,9 @@ func (n *RuntimeLuaNakamaModule) walletLedgerUpdate(l *lua.LState) int {
 // @summary List all wallet updates for a particular user from oldest to newest.
 // @param userId(type=string) The ID of the user to list wallet updates for.
 // @param limit(type=number, optional=true, default=100) Limit number of results.
-// @param cursor(type=string, optional=true) Pagination cursor from previous result. If none available set to nil or "" (empty string).
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return itemsTable(table) A table containing wallet entries with Id, UserId, CreateTime, UpdateTime, Changeset, Metadata parameters.
-// @return newCursor(string) Pagination cursor.
+// @return newCursor(string) Pagination cursor. Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) walletLedgerList(l *lua.LState) int {
 	// Parse user ID.
@@ -5343,9 +5442,9 @@ func (n *RuntimeLuaNakamaModule) walletLedgerList(l *lua.LState) int {
 // @param userId(type=string) User ID to list records for or "" (empty string) for public records.
 // @param collection(type=string) Collection to list data from.
 // @param limit(type=number, optional=true, default=100) Limit number of records retrieved.
-// @param cursor(type=string, optional=true) Pagination cursor from previous result. If none available set to nil or "" (empty string).
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return objects(table) A list of storage objects.
-// @return cursor(Opt string) Pagination cursor.
+// @return cursor(string) Pagination cursor.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) storageList(l *lua.LState) int {
 	userIDString := l.OptString(1, "")
@@ -5703,7 +5802,7 @@ func (n *RuntimeLuaNakamaModule) storageWrite(l *lua.LState) int {
 		return 0
 	}
 
-	acks, _, err := StorageWriteObjects(l.Context(), n.logger, n.db, true, ops)
+	acks, _, err := StorageWriteObjects(l.Context(), n.logger, n.db, n.metrics, true, ops)
 	if err != nil {
 		l.RaiseError(fmt.Sprintf("failed to write storage objects: %s", err.Error()))
 		return 0
@@ -6203,7 +6302,7 @@ func (n *RuntimeLuaNakamaModule) multiUpdate(l *lua.LState) int {
 
 	updateLedger := l.OptBool(4, false)
 
-	acks, results, err := MultiUpdate(l.Context(), n.logger, n.db, accountUpdates, storageWriteOps, walletUpdates, updateLedger)
+	acks, results, err := MultiUpdate(l.Context(), n.logger, n.db, n.metrics, accountUpdates, storageWriteOps, walletUpdates, updateLedger)
 	if err != nil {
 		l.RaiseError("error running multi update: %v", err.Error())
 		return 0
@@ -6352,8 +6451,8 @@ func (n *RuntimeLuaNakamaModule) leaderboardDelete(l *lua.LState) int {
 // @param categoryStart(type=number) Filter leaderboards with categories greater or equal than this value.
 // @param categoryEnd(type=number) Filter leaderboards with categories equal or less than this value.
 // @param limit(type=number, optional=true, default=10) Return only the required number of leaderboards denoted by this limit value.
-// @param cursor(type=string, optional=true) Cursor to paginate to the next result set. If this is empty/null there are no further results.
-// @return leaderboardList(table) A list of leaderboard results and possibly a cursor.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @return leaderboardList(table) A list of leaderboard results and possibly a cursor. If cursor is empty/nil there are no further results.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) leaderboardList(l *lua.LState) int {
 	categoryStart := l.OptInt(1, 0)
@@ -6422,10 +6521,10 @@ func (n *RuntimeLuaNakamaModule) leaderboardList(l *lua.LState) int {
 // @param id(type=string) The unique identifier for the leaderboard to list. Mandatory field.
 // @param owners(type=table) List of owners to filter to.
 // @param limit(type=number, optional=true) The maximum number of records to return (Max 10,000).
-// @param cursor(type=string, optional=true) A cursor used to fetch the next page when applicable.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return records(table) A page of leaderboard records.
 // @return ownerRecords(table) A list of owner leaderboard records (empty if the owners input parameter is not set).
-// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any).
+// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return prevCursor(string) An optional previous page cursor that can be used to retrieve the previous page of records (if any).
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) leaderboardRecordsList(l *lua.LState) int {
@@ -6488,7 +6587,7 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordsList(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, false)
 }
 
 // @group leaderboards
@@ -6579,8 +6678,11 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordWrite(l *lua.LState) int {
 // @param id(type=string) The ID of the leaderboard to list records for.
 // @param ownerId(type=string) The owner ID around which to show records.
 // @param limit(type=number, optional=true, default=10) Return only the required number of leaderboard records denoted by this limit value. Between 1-100.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @param expiry(type=number, optional=true, default=0) Time since epoch in seconds. Must be greater than 0.
-// @return leaderboardRecordsHaystack(table) A list of leaderboard records.
+// @return records(table) A list of leaderboard records.
+// @return prevCursor(string) An optional previous page cursor that can be used to retrieve the previous page of records (if any).
+// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) leaderboardRecordsHaystack(l *lua.LState) int {
 	id := l.CheckString(1)
@@ -6601,31 +6703,21 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordsHaystack(l *lua.LState) int {
 		return 0
 	}
 
-	expiry := l.OptInt(4, 0)
+	cursor := l.OptString(4, "")
+
+	expiry := l.OptInt(5, 0)
 	if expiry < 0 {
-		l.ArgError(4, "expiry should be time since epoch in seconds and has to be a positive integer")
+		l.ArgError(5, "expiry should be time since epoch in seconds and has to be a positive integer")
 		return 0
 	}
 
-	records, err := LeaderboardRecordsHaystack(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, id, userID, limit, int64(expiry))
+	records, err := LeaderboardRecordsHaystack(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, id, cursor, userID, limit, int64(expiry))
 	if err != nil {
 		l.RaiseError("error listing leaderboard records haystack: %v", err.Error())
 		return 0
 	}
 
-	recordsTable := l.CreateTable(len(records), 0)
-	for i, record := range records {
-		recordTable, err := recordToLuaTable(l, record)
-		if err != nil {
-			l.RaiseError(err.Error())
-			return 0
-		}
-
-		recordsTable.RawSetInt(i+1, recordTable)
-	}
-	l.Push(recordsTable)
-
-	return 1
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, true)
 }
 
 // @group leaderboards
@@ -6901,8 +6993,8 @@ func (n *RuntimeLuaNakamaModule) purchaseGetByTransactionId(l *lua.LState) int {
 // @summary List stored validated purchase receipts.
 // @param userId(type=string, optional=true) Filter by user ID. Can be an empty string to list purchases for all users.
 // @param limit(type=number, optional=true, default=100) Limit number of records retrieved.
-// @param cursor(type=string, optional=true) Pagination cursor from previous result. If none available set to nil or "" (empty string).
-// @return listPurchases(table) A page of stored validated purchases.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @return listPurchases(table) A page of stored validated purchases and possibly a cursor. If cursor is empty/nil there are no further results.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) purchasesList(l *lua.LState) int {
 	userID := l.OptString(1, "")
@@ -7079,10 +7171,10 @@ func (n *RuntimeLuaNakamaModule) subscriptionGetByProductId(l *lua.LState) int {
 
 // @group subscriptions
 // @summary List stored validated subscription receipts.
-// @param userId(type=OptString, optional=true) Filter by user ID. Can be an empty string to list subscriptions for all users.
+// @param userId(type=string, optional=true) Filter by user ID. Can be an empty string to list subscriptions for all users.
 // @param limit(type=number, optional=true, default=100) Limit number of records retrieved.
-// @param cursor(type=OptString, optional=true) Pagination cursor from previous result. If none available set to nil or "" (empty string).
-// @return listPurchases(table) A page of stored validated subscriptions.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @return listPurchases(table) A page of stored validated subscriptions and possibly a cursor. If cursor is empty/nil there are no further results.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) subscriptionsList(l *lua.LState) int {
 	userID := l.OptString(1, "")
@@ -7438,12 +7530,12 @@ func tournamentToLuaTable(l *lua.LState, tournament *api.Tournament) (*lua.LTabl
 // @param tournamentId(type=string) The ID of the tournament to list records for.
 // @param ownerIds(type=table, optional=true) List of owner IDs to filter results by.
 // @param limit(type=number) Return only the required number of tournament records denoted by this limit value. Max is 10000.
-// @param cursor(type=string, optional=true) Cursor to paginate to the next result set. If this is empty/null there are no further results.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @param overrideExpiry(type=number, optional=true, default=0) Records with expiry in the past are not returned unless within this defined limit. Must be equal or greater than 0.
 // @return records(table) A page of tournament records.
 // @return ownerRecords(table) A list of owner tournament records (empty if the owners input parameter is not set).
 // @return prevCursor(string) An optional previous page cursor that can be used to retrieve the previous page of records (if any).
-// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any).
+// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) tournamentRecordsList(l *lua.LState) int {
 	id := l.CheckString(1)
@@ -7505,10 +7597,10 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordsList(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, false)
 }
 
-func leaderboardRecordsToLua(l *lua.LState, records []*api.LeaderboardRecord, ownerRecords []*api.LeaderboardRecord, prevCursor, nextCursor string) int {
+func leaderboardRecordsToLua(l *lua.LState, records, ownerRecords []*api.LeaderboardRecord, prevCursor, nextCursor string, skipOwnerRecords bool) int {
 	recordsTable := l.CreateTable(len(records), 0)
 	for i, record := range records {
 		recordTable, err := recordToLuaTable(l, record)
@@ -7520,19 +7612,23 @@ func leaderboardRecordsToLua(l *lua.LState, records []*api.LeaderboardRecord, ow
 		recordsTable.RawSetInt(i+1, recordTable)
 	}
 
-	ownerRecordsTable := l.CreateTable(len(ownerRecords), 0)
-	for i, record := range ownerRecords {
-		recordTable, err := recordToLuaTable(l, record)
-		if err != nil {
-			l.RaiseError(err.Error())
-			return 0
+	l.Push(recordsTable)
+
+	if !skipOwnerRecords {
+		ownerRecordsTable := l.CreateTable(len(ownerRecords), 0)
+		for i, record := range ownerRecords {
+			recordTable, err := recordToLuaTable(l, record)
+			if err != nil {
+				l.RaiseError(err.Error())
+				return 0
+			}
+
+			ownerRecordsTable.RawSetInt(i+1, recordTable)
 		}
 
-		ownerRecordsTable.RawSetInt(i+1, recordTable)
+		l.Push(ownerRecordsTable)
 	}
 
-	l.Push(recordsTable)
-	l.Push(ownerRecordsTable)
 	if nextCursor != "" {
 		l.Push(lua.LString(nextCursor))
 	} else {
@@ -7544,6 +7640,9 @@ func leaderboardRecordsToLua(l *lua.LState, records []*api.LeaderboardRecord, ow
 		l.Push(lua.LNil)
 	}
 
+	if skipOwnerRecords {
+		return 3
+	}
 	return 4
 }
 
@@ -7589,8 +7688,8 @@ func recordToLuaTable(l *lua.LState, record *api.LeaderboardRecord) (*lua.LTable
 // @param startTime(type=number, optional=true) Filter tournament with that start after this time.
 // @param endTime(type=number, optional=true) Filter tournament with that end before this time.
 // @param limit(type=number, optional=true, default=10) Return only the required number of tournament denoted by this limit value.
-// @param cursor(type=string, optional=true) Cursor to paginate to the next result set. If this is empty/null there are no further results.
-// @return tournamentList(table) A list of tournament results and possibly a cursor.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @return tournamentList(table) A list of tournament results and possibly a cursor and possibly a cursor. If cursor is empty/nil there are no further results.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) tournamentList(l *lua.LState) int {
 	categoryStart := l.OptInt(1, 0)
@@ -7739,8 +7838,11 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordWrite(l *lua.LState) int {
 // @param id(type=string) The ID of the tournament to list records for.
 // @param ownerId(type=string) The owner ID around which to show records.
 // @param limit(type=number, optional=true, default=10) Return only the required number of tournament records denoted by this limit value. Between 1-100.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @param expiry(type=number, optional=true, default=0) Time since epoch in seconds. Must be greater than 0.
-// @return tournamentRecordsHaystack(table) A list of tournament records.
+// @return records(table) A page of tournament records.
+// @return prevCursor(string) An optional previous page cursor that can be used to retrieve the previous page of records (if any).
+// @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) tournamentRecordsHaystack(l *lua.LState) int {
 	id := l.CheckString(1)
@@ -7761,31 +7863,21 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordsHaystack(l *lua.LState) int {
 		return 0
 	}
 
-	expiry := l.OptInt(4, 0)
+	cursor := l.OptString(4, "")
+
+	expiry := l.OptInt(5, 0)
 	if expiry < 0 {
-		l.ArgError(4, "expiry should be time since epoch in seconds and has to be a positive integer")
+		l.ArgError(5, "expiry should be time since epoch in seconds and has to be a positive integer")
 		return 0
 	}
 
-	records, err := TournamentRecordsHaystack(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, id, userID, limit, int64(expiry))
+	records, err := TournamentRecordsHaystack(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, id, cursor, userID, limit, int64(expiry))
 	if err != nil {
 		l.RaiseError("error listing tournament records haystack: %v", err.Error())
 		return 0
 	}
 
-	recordsTable := l.CreateTable(len(records), 0)
-	for i, record := range records {
-		recordTable, err := recordToLuaTable(l, record)
-		if err != nil {
-			l.RaiseError(err.Error())
-			return 0
-		}
-
-		recordsTable.RawSetInt(i+1, recordTable)
-	}
-	l.Push(recordsTable)
-
-	return 1
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, true)
 }
 
 // @group groups
@@ -8035,11 +8127,7 @@ func (n *RuntimeLuaNakamaModule) groupUpdate(l *lua.LState) int {
 		metadata = &wrapperspb.StringValue{Value: string(metadataBytes)}
 	}
 
-	maxCountInt := l.OptInt(10, 0)
-	maxCount := 0
-	if maxCountInt > 0 && maxCountInt <= 100 {
-		maxCount = maxCountInt
-	}
+	maxCount := l.OptInt(10, 0)
 
 	if err = UpdateGroup(l.Context(), n.logger, n.db, groupID, userID, creatorID, name, lang, desc, avatarURL, metadata, open, maxCount); err != nil {
 		l.RaiseError("error while trying to update group: %v", err.Error())
@@ -8453,9 +8541,8 @@ func (n *RuntimeLuaNakamaModule) groupUsersKick(l *lua.LState) int {
 // @param members(type=number) Search by number of group members.
 // @param open(type=bool) Filter based on whether groups are Open or Closed.
 // @param limit(type=number, optional=true, default=100) Return only the required number of groups denoted by this limit value.
-// @param cursor(type=string, optional=true) Cursor to paginate to the next result set. If this is empty/null there are no further results.
-// @return groups(table) A list of groups.
-// @return cursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any).
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @return cursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) groupsList(l *lua.LState) int {
 	name := l.OptString(1, "")
@@ -8827,9 +8914,9 @@ func (n *RuntimeLuaNakamaModule) accountExportId(l *lua.LState) int {
 // @param userId(type=string) The ID of the user whose friends, invites, invited, and blocked you want to list.
 // @param limit(type=number, optional=true) The number of friends to retrieve in this page of results. No more than 100 limit allowed per result.
 // @param state(type=number, optional=true) The state of the friendship with the user. If unspecified this returns friends in all states for the user.
-// @param cursor(type=string, optional=true) The cursor returned from a previous listing request. Used to obtain the next page of results.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return friends(table) The user information for users that are friends of the current user.
-// @return cursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any).
+// @return cursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) friendsList(l *lua.LState) int {
 	userID, err := uuid.FromString(l.CheckString(1))
@@ -9357,9 +9444,9 @@ func (n *RuntimeLuaNakamaModule) channelMessageUpdate(l *lua.LState) int {
 // @param channelId(type=string) The ID of the channel to send the message on.
 // @param limit(type=number, optional=true, default=100) The number of messages to return per page.
 // @param forward(type=bool, optional=true, default=true) Whether to list messages from oldest to newest, or newest to oldest.
-// @param cursor(type=string, optional=true) A pagination cursor to use for retrieving a next page of messages.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return messages(table) Messages from the specified channel.
-// @return nextCursor(string) Cursor for the next page of messages, if any.
+// @return nextCursor(string) Cursor for the next page of messages, if any. Will be set to "" or nil when fetching last available page.
 // @return prevCursor(string) Cursor for the previous page of messages, if any.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) channelMessagesList(l *lua.LState) int {
@@ -9428,7 +9515,7 @@ func (n *RuntimeLuaNakamaModule) channelMessagesList(l *lua.LState) int {
 // @summary Create a channel identifier to be used in other runtime calls. Does not create a channel.
 // @param senderId(type=string) UserID of the message sender (when applicable). An empty string defaults to the system user.
 // @param target(type=string) Can be the room name, group identifier, or another username.
-// @param chanType(type=int) The type of channel, for example group or direct.
+// @param chanType(type=int) The type of channel, either Room (1), Direct (2), or Group (3).
 // @return channelId(string) The generated ID representing a channel.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) channelIdBuild(l *lua.LState) int {

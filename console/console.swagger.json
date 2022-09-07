@@ -1060,6 +1060,112 @@
         ]
       }
     },
+    "/v2/console/authenticate/logout": {
+      "post": {
+        "summary": "Log out a session and invalidate the session token.",
+        "operationId": "Console_AuthenticateLogout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/consoleAuthenticateLogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/channel": {
+      "get": {
+        "summary": "List channel messages with the selected filter",
+        "operationId": "Console_ListChannelMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiChannelMessageList"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "description": "Type of the chat channel.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "ROOM",
+              "GROUP",
+              "DIRECT"
+            ],
+            "default": "UNKNOWN"
+          },
+          {
+            "name": "label",
+            "description": "Label of the channel, if a standard chat room.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "group_id",
+            "description": "Group ID of the channel, if a group chat.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "user_id_one",
+            "description": "User IDs, if a direct chat.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "user_id_two",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "cursor",
+            "description": "Cursor to start from.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/v2/console/config": {
       "get": {
         "summary": "Get server config and configuration warnings.",
@@ -1594,7 +1700,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiMatchList"
+              "$ref": "#/definitions/nakamaconsoleMatchList"
             }
           },
           "default": {
@@ -1615,7 +1721,7 @@
           },
           {
             "name": "authoritative",
-            "description": "Authoritative or relayed matches.",
+            "description": "Authoritative or relayed matches, or null for both.",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -1644,8 +1750,22 @@
             "format": "int32"
           },
           {
+            "name": "match_id",
+            "description": "Match ID.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "query",
             "description": "Arbitrary label query.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "node",
+            "description": "Node name filter, optional.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1681,6 +1801,50 @@
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/message": {
+      "delete": {
+        "summary": "Delete messages.",
+        "operationId": "Console_DeleteChannelMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/consoleDeleteChannelMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "before",
+            "description": "Timestamp before which messages will be deleted.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "ids",
+            "description": "IDs of the messages to delete.",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
           }
         ],
         "tags": [
@@ -2371,6 +2535,31 @@
       },
       "description": "A message sent on a channel."
     },
+    "apiChannelMessageList": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiChannelMessage"
+          },
+          "description": "A list of messages."
+        },
+        "next_cursor": {
+          "type": "string",
+          "description": "The cursor to send when retrieving the next page, if any."
+        },
+        "prev_cursor": {
+          "type": "string",
+          "description": "The cursor to send when retrieving the previous page, if any."
+        },
+        "cacheable_cursor": {
+          "type": "string",
+          "description": "Cacheable cursor to list newer messages. Durable and designed to be stored, unlike next/prev cursors."
+        }
+      },
+      "description": "A list of channel messages, usually a result of a list operation."
+    },
     "apiFriend": {
       "type": "object",
       "properties": {
@@ -2572,19 +2761,6 @@
         }
       },
       "description": "A set of leaderboard records, may be part of a leaderboard records page or a batch of individual records."
-    },
-    "apiMatchList": {
-      "type": "object",
-      "properties": {
-        "matches": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/nakamaapiMatch"
-          },
-          "description": "A number of matches corresponding to a list operation."
-        }
-      },
-      "description": "A list of realtime matches."
     },
     "apiNotification": {
       "type": "object",
@@ -2998,6 +3174,16 @@
       },
       "title": "API Explorer List of Endpoints"
     },
+    "consoleAuthenticateLogoutRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Session token to log out."
+        }
+      },
+      "description": "Log out a session and invalidate a session token."
+    },
     "consoleAuthenticateRequest": {
       "type": "object",
       "properties": {
@@ -3055,6 +3241,16 @@
       },
       "description": "A console user session."
     },
+    "consoleDeleteChannelMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "format": "int64",
+          "description": "Total number of messages deleted."
+        }
+      }
+    },
     "consoleGroupExport": {
       "type": "object",
       "properties": {
@@ -3071,6 +3267,29 @@
         }
       },
       "description": "An export of all information stored for a group."
+    },
+    "consoleListChannelMessagesRequestType": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ROOM",
+        "GROUP",
+        "DIRECT"
+      ],
+      "default": "UNKNOWN"
+    },
+    "consoleMatchListMatch": {
+      "type": "object",
+      "properties": {
+        "api_match": {
+          "$ref": "#/definitions/nakamaapiMatch",
+          "title": "The API match"
+        },
+        "node": {
+          "type": "string",
+          "title": "The node name"
+        }
+      }
     },
     "consoleMatchState": {
       "type": "object",
@@ -3670,6 +3889,18 @@
         }
       },
       "description": "A list of leaderboards."
+    },
+    "nakamaconsoleMatchList": {
+      "type": "object",
+      "properties": {
+        "matches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/consoleMatchListMatch"
+          }
+        }
+      },
+      "description": "A list of realtime matches, with their node names."
     },
     "protobufAny": {
       "type": "object",
