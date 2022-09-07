@@ -37,7 +37,7 @@ func loggerForTest(t *testing.T) *zap.Logger {
 
 // loggerForBenchmark allows for easily adjusting log output produced by tests in one place
 func loggerForBenchmark(b *testing.B) *zap.Logger {
-	return NewJSONLogger(os.Stdout, zapcore.ErrorLevel, JSONFormat)
+	return NewJSONLogger(os.Stdout, zapcore.WarnLevel, JSONFormat)
 }
 
 type fatalable interface {
@@ -181,7 +181,9 @@ func (s *testMetrics) CountWebsocketOpened(delta int64)                         
 func (s *testMetrics) CountWebsocketClosed(delta int64)                                     {}
 func (s *testMetrics) GaugeSessions(value float64)                                          {}
 func (s *testMetrics) GaugePresences(value float64)                                         {}
+func (s *testMetrics) Matchmaker(tickets, activeTickets float64, processTime time.Duration) {}
 func (s *testMetrics) PresenceEvent(dequeueElapsed, processElapsed time.Duration)           {}
+func (s *testMetrics) StorageRejectCount(tags map[string]string, delta int64)               {}
 func (s *testMetrics) CustomCounter(name string, tags map[string]string, delta int64)       {}
 func (s *testMetrics) CustomGauge(name string, tags map[string]string, value float64)       {}
 func (s *testMetrics) CustomTimer(name string, tags map[string]string, value time.Duration) {}

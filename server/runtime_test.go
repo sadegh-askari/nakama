@@ -76,7 +76,7 @@ func runtimeWithModules(t *testing.T, modules map[string]string) (*Runtime, *Run
 	cfg := NewConfig(logger)
 	cfg.Runtime.Path = dir
 
-	return NewRuntime(context.Background(), logger, logger, NewDB(t), protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, metrics, nil, &DummyMessageRouter{})
+	return NewRuntime(context.Background(), logger, logger, NewDB(t), protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, metrics, nil, &DummyMessageRouter{})
 }
 
 func TestRuntimeSampleScript(t *testing.T) {
@@ -354,7 +354,7 @@ nakama.register_rpc(test.printWorld, "helloworld")`,
 
 	db := NewDB(t)
 	pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, nil, nil, nil, nil, nil, nil, nil, runtime)
-	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, metrics, pipeline, runtime)
+	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, metrics, pipeline, runtime)
 	defer apiServer.Stop()
 
 	payload := "\"Hello World\""
@@ -658,6 +658,26 @@ local user_id = "4c2ae592-b2a7-445e-98ec-697694478b1c" -- who to send
 local code = 1
 
 nk.notification_send(user_id, subject, content, code, "", false)`,
+	}
+
+	_, _, err := runtimeWithModules(t, modules)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+}
+
+func TestRuntimeNotificationsDelete(t *testing.T) {
+	modules := map[string]string{
+		"test": `
+local nk = require("nakama")
+
+local user_id = "4c2ae592-b2a7-445e-98ec-697694478b1c"
+local notification_id = "3707b43c-60f0-4ba7-a94b-e21a028aeffb"
+
+local notifications = {
+  { user_id = user_id, notification_id = notification_id }
+}
+nk.notifications_delete(notifications)`,
 	}
 
 	_, _, err := runtimeWithModules(t, modules)

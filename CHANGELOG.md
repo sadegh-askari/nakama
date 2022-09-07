@@ -3,6 +3,31 @@ All notable changes to this project are documented below.
 
 The format is based on [keep a changelog](http://keepachangelog.com) and this project uses [semantic versioning](http://semver.org).
 
+## [3.13.1] - 2022-08-18
+### Fixed
+- Push new tag for fix to Docker image releases.
+
+## [3.13.0] - 2022-08-18
+### Added
+- Add subscription validation APIs and runtime functions for Google and Apple.
+- New Chat Messages view in the Nakama Console.
+- New Chat Messages listing and delete endpoints in the Nakama Console API.
+- Add extended filtering options to Nakama Console Matches view.
+- Add additional filter handling to Nakama Console Accounts view.
+- Add "NotificationsDelete" function to all runtimes.
+
+### Changed
+- Improve runtime handling of non-persisted purchases and subscriptions.
+- Improve validation of count multiple matchmaker parameter.
+- Use stricter validation of user email inputs in the Nakama Console.
+- Add next and previous cursor to results of leaderboard and tournament records around owner client operations.
+- Add next and previous cursor to results of leaderboard and tournament records haystack runtime operations.
+- Build with Go 1.19.0 release.
+- Improve signature of JavaScript runtime HMAC SHA256 hash function.
+- Improve signature of JavaScript runtime Base64 encode functions.
+- Improve handling of JavaScript runtime context cancellation.
+- Allow runtime group updates to increase max count beyond 100.
+
 ## [3.12.0] - 2022-05-22
 ### Added
 - Add "FriendsBlock" function to all runtimes.

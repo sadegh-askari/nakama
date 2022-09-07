@@ -141,7 +141,7 @@ func processMultiUpdateInput(accountUpdates []*runtime.AccountUpdate, storageWri
 	return accountUpdateOps, storageWriteOps, walletUpdateOps, nil
 }
 
-func MultiUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, accountUpdates []*accountUpdate, storageWrites StorageOpWrites, walletUpdates []*walletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
+func MultiUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Metrics, accountUpdates []*accountUpdate, storageWrites StorageOpWrites, walletUpdates []*walletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
 	if len(accountUpdates) == 0 && len(storageWrites) == 0 && len(walletUpdates) == 0 {
 		return nil, nil, nil
 	}
@@ -166,7 +166,7 @@ func MultiUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, accountUpd
 		}
 
 		// Execute any storage updates.
-		storageWriteAcks, updateErr = storageWriteObjects(ctx, logger, tx, true, storageWrites)
+		storageWriteAcks, updateErr = storageWriteObjects(ctx, logger, metrics, tx, true, storageWrites)
 		if updateErr != nil {
 			return updateErr
 		}

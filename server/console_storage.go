@@ -334,7 +334,7 @@ func (s *ConsoleServer) WriteStorageObject(ctx context.Context, in *console.Writ
 		return nil, status.Error(codes.InvalidArgument, "Requires a valid JSON object value.")
 	}
 
-	acks, code, err := StorageWriteObjects(ctx, s.logger, s.db, true, StorageOpWrites{
+	acks, code, err := StorageWriteObjects(ctx, s.logger, s.db, s.metrics, true, StorageOpWrites{
 		&StorageOpWrite{
 			OwnerID: in.UserId,
 			Object: &api.WriteStorageObject{
@@ -383,7 +383,7 @@ func countDatabase(ctx context.Context, logger *zap.Logger, db *sql.DB, tableNam
 	}
 
 	// If the first fast count failed, returned NULL, or returned 0 try a fast count on partitioned table metadata.
-	if err := db.QueryRowContext(ctx, "SELECT sum(reltuples::BIGINT) FROM pg_class WHERE relname ilike $1", tableName+"%_pkey").Scan(&count); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT sum(reltuples)::BIGINT FROM pg_class WHERE relname ILIKE $1", tableName+"%_pkey").Scan(&count); err != nil {
 		logger.Warn("Error counting storage objects.", zap.Error(err))
 		if err == context.Canceled {
 			// If the context was cancelled do not attempt any further counts.
