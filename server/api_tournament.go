@@ -20,17 +20,71 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
+	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+func (s *ApiServer) DeleteTournamentRecord(ctx context.Context, in *api.DeleteTournamentRecordRequest) (*emptypb.Empty, error) {
+	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
+
+	// Before hook.
+	if fn := s.runtime.BeforeDeleteTournamentRecord(); fn != nil {
+		beforeFn := func(clientIP, clientPort string) error {
+			result, err, code := fn(ctx, s.logger, userID.String(), ctx.Value(ctxUsernameKey{}).(string), ctx.Value(ctxVarsKey{}).(map[string]string), ctx.Value(ctxExpiryKey{}).(int64), clientIP, clientPort, in)
+			if err != nil {
+				return status.Error(code, err.Error())
+			}
+			if result == nil {
+				// If result is nil, requested resource is disabled.
+				s.logger.Warn("Intercepted a disabled resource.", zap.Any("resource", ctx.Value(ctxFullMethodKey{}).(string)), zap.String("uid", userID.String()))
+				return status.Error(codes.NotFound, "Requested resource was not found.")
+			}
+			in = result
+			return nil
+		}
+
+		// Execute the before function lambda wrapped in a trace for stats measurement.
+		err := traceApiBefore(ctx, s.logger, s.metrics, ctx.Value(ctxFullMethodKey{}).(string), beforeFn)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if in.TournamentId == "" {
+		return nil, status.Error(codes.InvalidArgument, "Invalid tournament ID.")
+	}
+
+	if err := TournamentRecordDelete(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, in.TournamentId, userID.String()); err != nil {
+		switch err {
+		case ErrLeaderboardNotFound:
+			return nil, status.Error(codes.NotFound, "Tournament not found.")
+		case ErrLeaderboardAuthoritative:
+			return nil, status.Error(codes.PermissionDenied, "Tournament only allows authoritative score deletions.")
+		default:
+			return nil, status.Error(codes.Internal, "Error deleting score from tournament.")
+		}
+	}
+
+	// After hook.
+	if fn := s.runtime.AfterDeleteTournamentRecord(); fn != nil {
+		afterFn := func(clientIP, clientPort string) error {
+			return fn(ctx, s.logger, userID.String(), ctx.Value(ctxUsernameKey{}).(string), ctx.Value(ctxVarsKey{}).(map[string]string), ctx.Value(ctxExpiryKey{}).(int64), clientIP, clientPort, in)
+		}
+
+		// Execute the after function lambda wrapped in a trace for stats measurement.
+		traceApiAfter(ctx, s.logger, s.metrics, ctx.Value(ctxFullMethodKey{}).(string), afterFn)
+	}
+
+	return &emptypb.Empty{}, nil
+}
 
 func (s *ApiServer) JoinTournament(ctx context.Context, in *api.JoinTournamentRequest) (*emptypb.Empty, error) {
 	userID := ctx.Value(ctxUserIDKey{}).(uuid.UUID)
@@ -61,7 +115,7 @@ func (s *ApiServer) JoinTournament(ctx context.Context, in *api.JoinTournamentRe
 
 	tournamentID := in.GetTournamentId()
 
-	if err := TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, userID.String(), username, tournamentID); err != nil {
+	if err := TournamentJoin(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, username, tournamentID); err != nil {
 		if err == runtime.ErrTournamentNotFound {
 			return nil, status.Error(codes.NotFound, "Tournament not found.")
 		} else if err == runtime.ErrTournamentMaxSizeReached {
@@ -214,12 +268,12 @@ func (s *ApiServer) ListTournaments(ctx context.Context, in *api.ListTournaments
 	}
 
 	// If startTime and endTime are both not set the API will only return active or future tournaments.
-	startTime := -1 // don't include start time in query
+	startTime := -1 // Don't include start time in query by default.
 	if in.GetStartTime() != nil {
 		startTime = int(in.GetStartTime().GetValue())
 	}
 
-	endTime := -1 // don't include end time in query
+	endTime := -1 // Don't include end time in query by default.
 	if in.GetEndTime() != nil {
 		endTime = int(in.GetEndTime().GetValue())
 		if endTime != 0 && endTime < startTime { // Allow 0 value to explicitly request tournaments with no end time set.
@@ -301,17 +355,18 @@ func (s *ApiServer) WriteTournamentRecord(ctx context.Context, in *api.WriteTour
 
 	record, err := TournamentRecordWrite(ctx, s.logger, s.db, s.leaderboardCache, s.leaderboardRankCache, userID, in.GetTournamentId(), userID, username, in.GetRecord().GetScore(), in.GetRecord().GetSubscore(), in.GetRecord().GetMetadata(), in.GetRecord().GetOperator())
 	if err != nil {
-		if err == runtime.ErrTournamentMaxSizeReached {
+		switch err {
+		case runtime.ErrTournamentMaxSizeReached:
 			return nil, status.Error(codes.FailedPrecondition, "Tournament has reached max size.")
-		} else if err == runtime.ErrTournamentAuthoritative {
+		case runtime.ErrTournamentAuthoritative:
 			return nil, status.Error(codes.PermissionDenied, "Tournament only allows authoritative score submissions.")
-		} else if err == runtime.ErrTournamentWriteMaxNumScoreReached {
+		case runtime.ErrTournamentWriteMaxNumScoreReached:
 			return nil, status.Error(codes.FailedPrecondition, "Reached allowed max number of score attempts.")
-		} else if err == runtime.ErrTournamentWriteJoinRequired {
+		case runtime.ErrTournamentWriteJoinRequired:
 			return nil, status.Error(codes.FailedPrecondition, "Must join tournament before attempting to write value.")
-		} else if err == runtime.ErrTournamentOutsideDuration {
+		case runtime.ErrTournamentOutsideDuration:
 			return nil, status.Error(codes.FailedPrecondition, "Tournament is not active and cannot accept new scores.")
-		} else {
+		default:
 			return nil, status.Error(codes.Internal, "Error writing score to tournament.")
 		}
 	}

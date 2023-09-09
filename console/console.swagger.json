@@ -60,7 +60,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from.",
+            "description": "Cursor to start from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -77,6 +77,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -120,7 +121,7 @@
           },
           {
             "name": "limit",
-            "description": "Max number of results per page.",
+            "description": "Max number of results per page",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -128,7 +129,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from.",
+            "description": "Cursor to retrieve a page of records from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -177,6 +178,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -214,6 +216,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -308,6 +311,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -404,6 +408,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -475,6 +480,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -514,6 +520,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -546,6 +553,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -578,6 +586,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -610,6 +619,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -657,6 +667,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -689,6 +700,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -721,6 +733,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -753,6 +766,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -785,6 +799,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -817,6 +832,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -849,6 +865,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -888,6 +905,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1043,6 +1061,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Authenticate a console user with username and password.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1068,6 +1087,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1081,6 +1101,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Log out a session and invalidate a session token.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1114,7 +1135,7 @@
         "parameters": [
           {
             "name": "type",
-            "description": "Type of the chat channel.",
+            "description": "Type of the chat channel",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1128,21 +1149,21 @@
           },
           {
             "name": "label",
-            "description": "Label of the channel, if a standard chat room.",
+            "description": "Label of the channel, if a standard chat room",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "group_id",
-            "description": "Group ID of the channel, if a group chat.",
+            "description": "Group ID of the channel, if a group chat",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "user_id_one",
-            "description": "User IDs, if a direct chat.",
+            "description": "User IDs, if a direct chat",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1155,7 +1176,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from.",
+            "description": "Cursor to start from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1217,7 +1238,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from.",
+            "description": "Cursor to start from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1236,6 +1257,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1275,6 +1297,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1299,6 +1322,58 @@
             "in": "path",
             "required": true,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/v2/console/group/{group_id}/add": {
+      "post": {
+        "summary": "Add/join members to a group.",
+        "operationId": "Console_AddGroupUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group_id",
+            "description": "ID of the group to add them to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ids": {
+                  "type": "string",
+                  "description": "Users to add/join."
+                },
+                "join_request": {
+                  "type": "boolean",
+                  "description": "Whether it is a join request."
+                }
+              },
+              "description": "Add/join users to a group."
+            }
           }
         ],
         "tags": [
@@ -1344,6 +1419,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1374,6 +1450,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1520,6 +1597,15 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "cursor",
+            "description": "An optional cursor to paginate from.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
           "Console"
         ]
@@ -1563,6 +1649,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1595,6 +1682,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1873,14 +1961,14 @@
         "parameters": [
           {
             "name": "user_id",
-            "description": "User ID to filter purchases for.",
+            "description": "User ID to filter purchases for",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
-            "description": "Max number of results per page.",
+            "description": "Max number of results per page",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1888,7 +1976,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from.",
+            "description": "Cursor to retrieve a page of records from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1973,21 +2061,21 @@
           },
           {
             "name": "key",
-            "description": "Key to filter objects for.",
+            "description": "Key to filter objects for",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "collection",
-            "description": "Collection name to filter objects for.",
+            "description": "Collection name to filter objects for",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from.",
+            "description": "Cursor to retrieve a page of records from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2004,6 +2092,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2094,6 +2183,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2220,6 +2310,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2286,14 +2377,14 @@
         "parameters": [
           {
             "name": "user_id",
-            "description": "UserID to filter subscriptions for.",
+            "description": "UserID to filter subscriptions for",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
-            "description": "Max number of results per page.",
+            "description": "Max number of results per page",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2301,7 +2392,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from.",
+            "description": "Cursor to retrieve a page of records from",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2341,6 +2432,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2371,6 +2463,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2505,12 +2598,12 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the message was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the message was created."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the message was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the message was last updated."
         },
         "persistent": {
           "type": "boolean",
@@ -2645,12 +2738,12 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the group was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the group was created."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the group was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the group was last updated."
         }
       },
       "description": "A group in the server."
@@ -2709,17 +2802,17 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record was created."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record was updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record was updated."
         },
         "expiry_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record expires."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record expires."
         },
         "rank": {
           "type": "string",
@@ -2789,7 +2882,7 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the notification was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was created."
         },
         "persistent": {
           "type": "boolean",
@@ -2855,12 +2948,12 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the object was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was created."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the object was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was last updated."
         }
       },
       "description": "An object within the storage engine."
@@ -2950,6 +3043,10 @@
     "apiValidatedPurchase": {
       "type": "object",
       "properties": {
+        "user_id": {
+          "type": "string",
+          "description": "Purchase User ID."
+        },
         "product_id": {
           "type": "string",
           "description": "Purchase Product ID."
@@ -2965,17 +3062,22 @@
         "purchase_time": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the purchase was done."
+          "description": "Timestamp when the purchase was done."
         },
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the receipt validation was stored in DB."
+          "description": "Timestamp when the receipt validation was stored in DB."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the receipt validation was updated in DB."
+          "description": "Timestamp when the receipt validation was updated in DB."
+        },
+        "refund_time": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Timestamp when the purchase was refunded. Set to UNIX"
         },
         "provider_response": {
           "type": "string",
@@ -2995,6 +3097,10 @@
     "apiValidatedSubscription": {
       "type": "object",
       "properties": {
+        "user_id": {
+          "type": "string",
+          "description": "Subscription User ID."
+        },
         "product_id": {
           "type": "string",
           "description": "Purchase Product ID."
@@ -3030,6 +3136,19 @@
           "type": "string",
           "format": "date-time",
           "description": "Subscription expiration time. The subscription can still be auto-renewed to extend the expiration time further."
+        },
+        "refund_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Subscription refund time. If this time is set, the subscription was refunded."
+        },
+        "provider_response": {
+          "type": "string",
+          "description": "Raw provider validation response body."
+        },
+        "provider_notification": {
+          "type": "string",
+          "description": "Raw provider notification body."
         },
         "active": {
           "type": "boolean",
@@ -3619,12 +3738,12 @@
         "verify_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user's email was verified."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's email was verified."
         },
         "disable_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user's account was disabled/banned."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's account was disabled/banned."
         }
       },
       "description": "A user with additional account details. Always the current user."
@@ -3724,12 +3843,12 @@
         "create_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user was created."
         },
         "update_time": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user was last updated."
         },
         "facebook_instant_game_id": {
           "type": "string",
@@ -3873,6 +3992,16 @@
         "tournament": {
           "type": "boolean",
           "description": "Tournament."
+        },
+        "prev_reset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The UNIX time when the tournament was last reset. A computed value."
+        },
+        "next_reset": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The UNIX time when the tournament is next playable. A computed value."
         }
       },
       "description": "A leaderboard."
@@ -3886,6 +4015,15 @@
             "$ref": "#/definitions/nakamaconsoleLeaderboard"
           },
           "description": "The list of leaderboards returned."
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Total count of leaderboards and tournaments."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "A cursor, if any."
         }
       },
       "description": "A list of leaderboards."

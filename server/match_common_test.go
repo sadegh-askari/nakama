@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/atomic"
@@ -64,7 +64,7 @@ func createTestMatchRegistry(t fatalable, logger *zap.Logger) (*LocalMatchRegist
 				return nil, err
 			}
 
-			rmc, err := NewRuntimeGoMatchCore(logger, "module", matchRegistry, messageRouter, id, "node",
+			rmc, err := NewRuntimeGoMatchCore(logger, "module", matchRegistry, messageRouter, id, "node", "",
 				stopped, nil, map[string]string{}, nil, match)
 			if err != nil {
 				return nil, err
@@ -138,7 +138,9 @@ func (m *testMatch) MatchLoop(ctx context.Context, logger runtime.Logger, db *sq
 	for _, message := range messages {
 		logger.Info("Received %v from %v", string(message.GetData()), message.GetUserId())
 		reliable := true
-		dispatcher.BroadcastMessage(1, message.GetData(), []runtime.Presence{message}, nil, reliable)
+		if err := dispatcher.BroadcastMessage(1, message.GetData(), []runtime.Presence{message}, nil, reliable); err != nil {
+			logger.Error("Failed to broadcast message: %w", err)
+		}
 	}
 	return mState
 }
@@ -147,7 +149,9 @@ func (m *testMatch) MatchTerminate(ctx context.Context, logger runtime.Logger, d
 	dispatcher runtime.MatchDispatcher, tick int64, state interface{}, graceSeconds int) interface{} {
 	message := "Server shutting down in " + strconv.Itoa(graceSeconds) + " seconds."
 	reliable := true
-	dispatcher.BroadcastMessage(2, []byte(message), []runtime.Presence{}, nil, reliable)
+	if err := dispatcher.BroadcastMessage(2, []byte(message), []runtime.Presence{}, nil, reliable); err != nil {
+		logger.Error("Failed to broadcast message: %w", err)
+	}
 	return state
 }
 
@@ -202,6 +206,7 @@ func (s *testMessageRouter) SendToPresenceIDs(_ *zap.Logger, presences []*Presen
 }
 func (s *testMessageRouter) SendToStream(*zap.Logger, PresenceStream, *rtapi.Envelope, bool) {}
 func (s *testMessageRouter) SendDeferred(*zap.Logger, []*DeferredMessage)                    {}
+func (s *testMessageRouter) SendToAll(*zap.Logger, *rtapi.Envelope, bool)                    {}
 
 // testTracker implements the Tracker interface and does nothing
 type testTracker struct{}
@@ -312,10 +317,13 @@ func (s *testSessionRegistry) Add(session Session) {}
 
 func (s *testSessionRegistry) Remove(sessionID uuid.UUID) {}
 
-func (s *testSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID,
+func (s *testSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID, ban bool,
 	reason ...runtime.PresenceReason) error {
 	return nil
 }
 
 func (s *testSessionRegistry) SingleSession(ctx context.Context, tracker Tracker, userID, sessionID uuid.UUID) {
+}
+
+func (s *testSessionRegistry) Range(fn func(session Session) bool) {
 }

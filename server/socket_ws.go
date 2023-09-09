@@ -18,8 +18,9 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -55,7 +56,19 @@ func NewSocketWsAcceptor(logger *zap.Logger, config Config, sessionRegistry Sess
 		}
 
 		// Check authentication.
-		token := r.URL.Query().Get("token")
+		var token string
+		if auth := r.Header["Authorization"]; len(auth) >= 1 {
+			// Attempt header based authentication.
+			const prefix = "Bearer "
+			if !strings.HasPrefix(auth[0], prefix) {
+				http.Error(w, "Missing or invalid token", 401)
+				return
+			}
+			token = auth[0][len(prefix):]
+		} else {
+			// Attempt query parameter based authentication.
+			token = r.URL.Query().Get("token")
+		}
 		if token == "" {
 			http.Error(w, "Missing or invalid token", 401)
 			return

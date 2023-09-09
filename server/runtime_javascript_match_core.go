@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama/v3/social"
 	"go.uber.org/atomic"
@@ -63,12 +63,11 @@ type RuntimeJavaScriptMatchCore struct {
 	dispatcher    goja.Value
 	nakamaModule  goja.Value
 	loggerModule  goja.Value
-	program       *goja.Program
 
 	ctxCancelFn context.CancelFunc
 }
 
-func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache) (RuntimeMatchCore, error) {
+func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node, version string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache, storageIndex StorageIndex) (RuntimeMatchCore, error) {
 	runtime := goja.New()
 
 	jsLoggerInst, err := NewJsLogger(runtime, logger)
@@ -76,22 +75,24 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
 	}
 
-	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, eventFn, matchCreateFn)
-	nk := runtime.ToValue(nakamaModule.Constructor(runtime))
-	nkInst, err := runtime.New(nk)
+	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, storageIndex, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, eventFn, matchCreateFn)
+	nk, err := nakamaModule.Constructor(runtime)
 	if err != nil {
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
 	}
 	goCtx, ctxCancelFn := context.WithCancel(context.Background())
 	nakamaModule.ctx = goCtx
 
-	runtime.RunProgram(modCache.Modules[modCache.Names[0]].Program)
+	_, err = runtime.RunProgram(modCache.Modules[modCache.Names[0]].Program)
+	if err != nil {
+		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
+	}
 	freezeGlobalObject(config, runtime)
 
-	ctx := NewRuntimeJsInitContext(runtime, node, config.GetRuntime().Environment)
-	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MODE, RuntimeExecutionModeMatch)
-	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_ID, fmt.Sprintf("%v.%v", id.String(), node))
-	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_NODE, node)
+	ctx := NewRuntimeJsInitContext(runtime, node, version, config.GetRuntime().Environment)
+	_ = ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MODE, RuntimeExecutionModeMatch)
+	_ = ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_ID, fmt.Sprintf("%v.%v", id.String(), node))
+	_ = ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_NODE, node)
 
 	// TODO: goja runtime does not currently support passing a context to the vm
 	// goCtx, ctxCancelFn := context.WithCancel(context.Background())
@@ -165,16 +166,16 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 		ctx:           ctx,
 
 		loggerModule: jsLoggerInst,
-		nakamaModule: nkInst,
+		nakamaModule: nk,
 		ctxCancelFn:  ctxCancelFn,
 	}
 
 	dispatcher := runtime.ToValue(
 		func(call goja.ConstructorCall) *goja.Object {
-			call.This.Set("broadcastMessage", core.broadcastMessage(runtime))
-			call.This.Set("broadcastMessageDeferred", core.broadcastMessageDeferred(runtime))
-			call.This.Set("matchKick", core.matchKick(runtime))
-			call.This.Set("matchLabelUpdate", core.matchLabelUpdate(runtime))
+			_ = call.This.Set("broadcastMessage", core.broadcastMessage(runtime))
+			_ = call.This.Set("broadcastMessageDeferred", core.broadcastMessageDeferred(runtime))
+			_ = call.This.Set("matchKick", core.matchKick(runtime))
+			_ = call.This.Set("matchLabelUpdate", core.matchLabelUpdate(runtime))
 
 			freeze(call.This)
 
@@ -239,8 +240,8 @@ func (rm *RuntimeJavaScriptMatchCore) MatchInit(presenceList *MatchPresenceList,
 	}
 	rm.label.Store(label)
 
-	rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_LABEL, label)
-	rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_TICK_RATE, rate)
+	_ = rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_LABEL, label)
+	_ = rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_TICK_RATE, rate)
 
 	rm.deferMessageFn = deferMessageFn
 	rm.presenceList = presenceList
@@ -251,28 +252,28 @@ func (rm *RuntimeJavaScriptMatchCore) MatchInit(presenceList *MatchPresenceList,
 func (rm *RuntimeJavaScriptMatchCore) MatchJoinAttempt(tick int64, state interface{}, userID, sessionID uuid.UUID, username string, sessionExpiry int64, vars map[string]string, clientIP, clientPort, node string, metadata map[string]string) (interface{}, bool, string, error) {
 	// Setup presence
 	presenceObj := rm.vm.NewObject()
-	presenceObj.Set("userId", userID.String())
-	presenceObj.Set("sessionId", sessionID.String())
-	presenceObj.Set("username", username)
-	presenceObj.Set("node", node)
+	_ = presenceObj.Set("userId", userID.String())
+	_ = presenceObj.Set("sessionId", sessionID.String())
+	_ = presenceObj.Set("username", username)
+	_ = presenceObj.Set("node", node)
 
 	// Setup ctx
 	ctxObj := rm.vm.NewObject()
 	for _, key := range rm.ctx.Keys() {
-		ctxObj.Set(key, rm.ctx.Get(key))
+		_ = ctxObj.Set(key, rm.ctx.Get(key))
 	}
-	ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USER_ID, userID.String())
-	ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USERNAME, username)
+	_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USER_ID, userID.String())
+	_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USERNAME, username)
 	if vars != nil {
-		ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_VARS, vars)
+		_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_VARS, vars)
 	}
-	ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USER_SESSION_EXP, sessionExpiry)
-	ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_SESSION_ID, sessionID.String())
+	_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_USER_SESSION_EXP, sessionExpiry)
+	_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_SESSION_ID, sessionID.String())
 	if clientIP != "" {
-		ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_CLIENT_IP, clientIP)
+		_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_CLIENT_IP, clientIP)
 	}
 	if clientPort != "" {
-		ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_CLIENT_PORT, clientPort)
+		_ = ctxObj.Set(__RUNTIME_JAVASCRIPT_CTX_CLIENT_PORT, clientPort)
 	}
 
 	pointerizeSlices(state)
@@ -301,7 +302,7 @@ func (rm *RuntimeJavaScriptMatchCore) MatchJoinAttempt(tick int64, state interfa
 	}
 
 	var rejectMsg string
-	if allow == false {
+	if !allow {
 		rejectMsgRet, ok := retMap["rejectMessage"]
 		if ok {
 			rejectMsg, ok = rejectMsgRet.(string)
@@ -575,11 +576,11 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 	data := f.Argument(1)
 	if !goja.IsUndefined(data) && !goja.IsNull(data) {
 		dataExport := data.Export()
-		switch dataExport.(type) {
+		switch val := dataExport.(type) {
 		case string:
-			dataBytes = []byte(dataExport.(string))
+			dataBytes = []byte(val)
 		case goja.ArrayBuffer:
-			dataBytes = dataExport.(goja.ArrayBuffer).Bytes()
+			dataBytes = val.Bytes()
 		default:
 			panic(r.NewTypeError("expects data to be an ArrayBuffer, a string or nil"))
 		}
@@ -602,7 +603,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 
 			presenceID := &PresenceID{}
 
-			sidVal, _ := pMap["sessionId"]
+			sidVal := pMap["sessionId"]
 			if sidVal == nil {
 				panic(r.NewTypeError("presence is expected to contain a 'sessionId'"))
 			}
@@ -615,7 +616,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 				panic(r.NewTypeError("expects a valid 'sessionId'"))
 			}
 
-			nodeVal, _ := pMap["node"]
+			nodeVal := pMap["node"]
 			if nodeVal == nil {
 				panic(r.NewTypeError("expects presence to contain a 'node'"))
 			}
@@ -646,7 +647,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 		if !ok {
 			panic(r.NewTypeError("expects sender to be an object"))
 		}
-		userIdVal, _ := senderMap["userId"]
+		userIdVal := senderMap["userId"]
 		if userIdVal == nil {
 			panic(r.NewTypeError("expects presence to contain 'userId'"))
 		}
@@ -660,7 +661,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 		}
 		presence.UserId = userIDStr
 
-		sidVal, _ := senderMap["sessionId"]
+		sidVal := senderMap["sessionId"]
 		if sidVal == nil {
 			panic(r.NewTypeError("presence is expected to contain a 'sessionId'"))
 		}
@@ -674,7 +675,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 		}
 		presence.SessionId = sidStr
 
-		usernameVal, _ := senderMap["username"]
+		usernameVal := senderMap["username"]
 		if usernameVal == nil {
 			panic(r.NewTypeError("presence is expected to contain a 'username'"))
 		}
@@ -745,7 +746,7 @@ func (rm *RuntimeJavaScriptMatchCore) matchKick(r *goja.Runtime) func(goja.Funct
 			}
 
 			presence := &MatchPresence{}
-			userIdVal, _ := pMap["userId"]
+			userIdVal := pMap["userId"]
 			if userIdVal == nil {
 				panic(r.NewTypeError("expects presence to contain 'userId'"))
 			}
@@ -759,7 +760,7 @@ func (rm *RuntimeJavaScriptMatchCore) matchKick(r *goja.Runtime) func(goja.Funct
 			}
 			presence.UserID = uid
 
-			sidVal, _ := pMap["sessionId"]
+			sidVal := pMap["sessionId"]
 			if sidVal == nil {
 				panic(r.NewTypeError("presence is expected to contain a 'sessionId'"))
 			}
@@ -773,7 +774,7 @@ func (rm *RuntimeJavaScriptMatchCore) matchKick(r *goja.Runtime) func(goja.Funct
 			}
 			presence.SessionID = sid
 
-			nodeVal, _ := pMap["node"]
+			nodeVal := pMap["node"]
 			if nodeVal == nil {
 				panic(r.NewTypeError("expects presence to contain a 'node'"))
 			}
@@ -806,7 +807,7 @@ func (rm *RuntimeJavaScriptMatchCore) matchLabelUpdate(r *goja.Runtime) func(goj
 		rm.label.Store(input)
 
 		// This must be executed from inside a match call so safe to update here.
-		rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_LABEL, input)
+		_ = rm.ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_LABEL, input)
 
 		return goja.Undefined()
 	}

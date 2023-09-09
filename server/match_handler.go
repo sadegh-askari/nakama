@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -210,13 +210,13 @@ func NewMatchHandler(logger *zap.Logger, config Config, sessionRegistry SessionR
 func (mh *MatchHandler) disconnectClients() {
 	presences := mh.PresenceList.ListPresences()
 	for _, presence := range presences {
-		_ = mh.sessionRegistry.Disconnect(context.Background(), presence.SessionID)
+		_ = mh.sessionRegistry.Disconnect(context.Background(), presence.SessionID, false)
 	}
 }
 
 // Stop the match handler and clean up all its resources.
 func (mh *MatchHandler) Stop() {
-	if !mh.stopped.CAS(false, true) {
+	if !mh.stopped.CompareAndSwap(false, true) {
 		return
 	}
 

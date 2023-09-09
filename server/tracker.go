@@ -21,7 +21,7 @@ import (
 	syncAtomic "sync/atomic"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/atomic"
@@ -901,7 +901,7 @@ func (t *LocalTracker) queueEvent(joins, leaves []*Presence) {
 func (t *LocalTracker) processEvent(e *PresenceEvent) {
 	dequeueTime := time.Now()
 	defer func() {
-		t.metrics.PresenceEvent(dequeueTime.Sub(e.QueueTime), time.Now().Sub(dequeueTime))
+		t.metrics.PresenceEvent(dequeueTime.Sub(e.QueueTime), time.Since(dequeueTime))
 	}()
 
 	t.logger.Debug("Processing presence event", zap.Int("joins", len(e.Joins)), zap.Int("leaves", len(e.Leaves)))

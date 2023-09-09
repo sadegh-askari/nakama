@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 const (
@@ -53,13 +53,25 @@ const (
 
 const accessTokenExpiresGracePeriod = 300 // 5 min grace period
 
+var cachedTokensGoogle = &googleTokenCache{
+	tokenMap: make(map[string]*accessTokenGoogle),
+}
+var cachedTokenHuawei accessTokenHuawei
+
+type googleTokenCache struct {
+	sync.RWMutex
+	tokenMap map[string]*accessTokenGoogle
+}
+
 type ValidationError struct {
 	Err        error
 	StatusCode int
 	Payload    string
 }
 
-func (e *ValidationError) Error() string { return e.Err.Error() }
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("%s, status=%d, payload=%s", e.Err.Error(), e.StatusCode, e.Payload)
+}
 func (e *ValidationError) Unwrap() error { return e.Err }
 
 var (
@@ -68,9 +80,6 @@ var (
 	ErrNon200ServiceHuawei    = errors.New("non-200 response from Huawei service")
 	ErrInvalidSignatureHuawei = errors.New("inAppPurchaseData invalid signature")
 )
-
-var cachedTokenGoogle accessTokenGoogle
-var cachedTokenHuawei accessTokenHuawei
 
 func init() {
 	// Hint to the JWT encoder that single-string arrays should be marshaled as strings.
@@ -83,10 +92,11 @@ func init() {
 
 type ValidateReceiptAppleResponseReceiptInApp struct {
 	OriginalTransactionID string `json:"original_transaction_id"`
-	TransactionId         string `json:"transaction_id"` // Different than OriginalTransactionId if the user Auto-renews subscription or restores a purchase.
+	TransactionId         string `json:"transaction_id"` // Different from OriginalTransactionId if the user Auto-renews subscription or restores a purchase.
 	ProductID             string `json:"product_id"`
 	ExpiresDateMs         string `json:"expires_date_ms"` // Subscription expiration or renewal date.
 	PurchaseDateMs        string `json:"purchase_date_ms"`
+	CancellationDateMs    string `json:"cancellation_date_ms"`
 }
 
 type ValidateReceiptAppleResponseReceipt struct {
@@ -249,12 +259,13 @@ type ValidateReceiptGoogleResponse struct {
 // A helper function to unwrap a receipt response from the Android Publisher API.
 //
 // The standard structure looks like:
-//   "{\"json\":\"{\\\"orderId\\\":\\\"..\\\",\\\"packageName\\\":\\\"..\\\",\\\"productId\\\":\\\"..\\\",
-//       \\\"purchaseTime\\\":1607721533824,\\\"purchaseState\\\":0,\\\"purchaseToken\\\":\\\"..\\\",
-//       \\\"acknowledged\\\":false}\",\"signature\":\"..\",\"skuDetails\":\"{\\\"productId\\\":\\\"..\\\",
-//       \\\"type\\\":\\\"inapp\\\",\\\"price\\\":\\\"\\u20ac82.67\\\",\\\"price_amount_micros\\\":82672732,
-//       \\\"price_currency_code\\\":\\\"EUR\\\",\\\"title\\\":\\\"..\\\",\\\"description\\\":\\\"..\\\",
-//       \\\"skuDetailsToken\\\":\\\"..\\\"}\"}"
+//
+//	"{\"json\":\"{\\\"orderId\\\":\\\"..\\\",\\\"packageName\\\":\\\"..\\\",\\\"productId\\\":\\\"..\\\",
+//	    \\\"purchaseTime\\\":1607721533824,\\\"purchaseState\\\":0,\\\"purchaseToken\\\":\\\"..\\\",
+//	    \\\"acknowledged\\\":false}\",\"signature\":\"..\",\"skuDetails\":\"{\\\"productId\\\":\\\"..\\\",
+//	    \\\"type\\\":\\\"inapp\\\",\\\"price\\\":\\\"\\u20ac82.67\\\",\\\"price_amount_micros\\\":82672732,
+//	    \\\"price_currency_code\\\":\\\"EUR\\\",\\\"title\\\":\\\"..\\\",\\\"description\\\":\\\"..\\\",
+//	    \\\"skuDetailsToken\\\":\\\"..\\\"}\"}"
 func decodeReceiptGoogle(receipt string) (*ReceiptGoogle, error) {
 	var wrapper map[string]interface{}
 	if err := json.Unmarshal([]byte(receipt), &wrapper); err != nil {
@@ -263,12 +274,14 @@ func decodeReceiptGoogle(receipt string) (*ReceiptGoogle, error) {
 
 	unwrapped, ok := wrapper["json"].(string)
 	if !ok {
-		return nil, errors.New("'json' field not found, receipt is malformed")
+		// If there is no 'json' field, assume the receipt is not in a
+		// wrapper. Just attempt and decode from the top level instead.
+		unwrapped = receipt
 	}
 
 	var gr ReceiptGoogle
 	if err := json.Unmarshal([]byte(unwrapped), &gr); err != nil {
-		return nil, err
+		return nil, errors.New("receipt is malformed")
 	}
 	return &gr, nil
 }
@@ -280,7 +293,6 @@ type accessTokenGoogle struct {
 	RefreshToken string    `json:"refresh_token"`
 	Scope        string    `json:"scope"`
 	fetchedAt    time.Time // Set when token is received
-	sync.RWMutex
 }
 
 func (at *accessTokenGoogle) Expired() bool {
@@ -289,20 +301,25 @@ func (at *accessTokenGoogle) Expired() bool {
 
 // Request an authenticated context (token) from Google for the Android publisher service.
 // https://developers.google.com/identity/protocols/oauth2#serviceaccount
-func getGoogleAccessToken(ctx context.Context, httpc *http.Client, email string, privateKey string) (string, error) {
+func getGoogleAccessToken(ctx context.Context, httpc *http.Client, email, privateKey string) (string, error) {
 	const authUrl = "https://accounts.google.com/o/oauth2/token"
 
-	cachedTokenGoogle.RLock()
-	if cachedTokenGoogle.AccessToken != "" && !cachedTokenGoogle.Expired() {
-		cachedTokenGoogle.RUnlock()
-		return cachedTokenGoogle.AccessToken, nil
+	cachedTokensGoogle.RLock()
+	cacheToken, found := cachedTokensGoogle.tokenMap[email]
+	if found && cacheToken.AccessToken != "" && !cacheToken.Expired() {
+		cachedTokensGoogle.RUnlock()
+		return cacheToken.AccessToken, nil
 	}
-	cachedTokenGoogle.RUnlock()
-	cachedTokenGoogle.Lock()
-	defer cachedTokenGoogle.Unlock()
-	if cachedTokenGoogle.AccessToken != "" && !cachedTokenGoogle.Expired() {
-		return cachedTokenGoogle.AccessToken, nil
+	cachedTokensGoogle.RUnlock()
+
+	cachedTokensGoogle.Lock()
+	cacheToken, found = cachedTokensGoogle.tokenMap[email]
+	if found && cacheToken.AccessToken != "" && !cacheToken.Expired() {
+		cachedTokensGoogle.Unlock()
+		return cacheToken.AccessToken, nil
 	}
+	defer cachedTokensGoogle.Unlock()
+
 	type GoogleClaims struct {
 		Scope string `json:"scope,omitempty"`
 		jwt.RegisteredClaims
@@ -313,8 +330,8 @@ func getGoogleAccessToken(ctx context.Context, httpc *http.Client, email string,
 		"https://www.googleapis.com/auth/androidpublisher",
 		jwt.RegisteredClaims{
 			Audience:  jwt.ClaimStrings{authUrl},
-			ExpiresAt: &jwt.NumericDate{now.Add(1 * time.Hour)},
-			IssuedAt:  &jwt.NumericDate{now},
+			ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now),
 			Issuer:    email,
 		},
 	}
@@ -359,11 +376,13 @@ func getGoogleAccessToken(ctx context.Context, httpc *http.Client, email string,
 
 	switch resp.StatusCode {
 	case 200:
-		cachedTokenGoogle.fetchedAt = time.Now()
-		if err := json.Unmarshal(buf, &cachedTokenGoogle); err != nil {
+		newToken := accessTokenGoogle{}
+		if err := json.Unmarshal(buf, &newToken); err != nil {
 			return "", err
 		}
-		return cachedTokenGoogle.AccessToken, nil
+		newToken.fetchedAt = time.Now()
+		cachedTokensGoogle.tokenMap[email] = &newToken
+		return newToken.AccessToken, nil
 	default:
 		return "", &ValidationError{
 			Err:        errors.New("non-200 response from Google auth"),
@@ -374,7 +393,7 @@ func getGoogleAccessToken(ctx context.Context, httpc *http.Client, email string,
 }
 
 // Validate an IAP receipt with the Android Publisher API and the Google credentials.
-func ValidateReceiptGoogle(ctx context.Context, httpc *http.Client, clientEmail string, privateKey string, receipt string) (*ValidateReceiptGoogleResponse, *ReceiptGoogle, []byte, error) {
+func ValidateReceiptGoogle(ctx context.Context, httpc *http.Client, clientEmail, privateKey, receipt string) (*ValidateReceiptGoogleResponse, *ReceiptGoogle, []byte, error) {
 	if len(clientEmail) < 1 {
 		return nil, nil, nil, errors.New("'clientEmail' must not be empty")
 	}
@@ -396,7 +415,7 @@ func ValidateReceiptGoogle(ctx context.Context, httpc *http.Client, clientEmail 
 }
 
 // Validate an IAP receipt with the Android Publisher API using a Google token.
-func validateReceiptGoogleWithIDs(ctx context.Context, httpc *http.Client, token string, receipt string) (*ValidateReceiptGoogleResponse, *ReceiptGoogle, []byte, error) {
+func validateReceiptGoogleWithIDs(ctx context.Context, httpc *http.Client, token, receipt string) (*ValidateReceiptGoogleResponse, *ReceiptGoogle, []byte, error) {
 	if len(token) < 1 {
 		return nil, nil, nil, errors.New("'token' must not be empty")
 	}
@@ -451,6 +470,124 @@ func validateReceiptGoogleWithIDs(ctx context.Context, httpc *http.Client, token
 			Payload:    string(buf),
 		}
 	}
+}
+
+func ListVoidedReceiptsGoogle(ctx context.Context, httpc *http.Client, clientEmail, privateKey, packageName string) ([]ListVoidedReceiptsGoogleVoidedPurchase, error) {
+	if len(clientEmail) < 1 {
+		return nil, errors.New("'clientEmail' must not be empty")
+	}
+
+	if len(privateKey) < 1 {
+		return nil, errors.New("'privateKey' must not be empty")
+	}
+
+	token, err := getGoogleAccessToken(ctx, httpc, clientEmail, privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return listVoidedReceiptsGoogleWithIDs(ctx, httpc, packageName, token)
+}
+
+type listVoidedReceiptsGoogleResponse struct {
+	PageInfo        ListVoidedReceiptsGooglePageInfo         `json:"pageInfo"`
+	TokenPagination ListVoidedReceiptsGoogleTokenPagination  `json:"tokenPagination"`
+	VoidedPurchases []ListVoidedReceiptsGoogleVoidedPurchase `json:"voidedPurchases"`
+}
+
+type ListVoidedReceiptsGooglePageInfo struct {
+	TotalResults  int `json:"totalResults"`
+	ResultPerPage int `json:"resultPerPage"`
+	StartIndex    int `json:"startIndex"`
+}
+
+type ListVoidedReceiptsGoogleTokenPagination struct {
+	NextPageToken     string `json:"nextPageToken"`
+	PreviousPageToken string `json:"previousPageToken"`
+}
+
+type ListVoidedReceiptsGoogleVoidedPurchase struct {
+	Kind               string `json:"kind"`
+	PurchaseToken      string `json:"purchaseToken"`
+	PurchaseTimeMillis string `json:"purchaseTimeMillis"`
+	VoidedTimeMillis   string `json:"voidedTimeMillis"`
+	OrderId            string `json:"orderId"`
+	VoidedSource       int    `json:"voidedSource"`
+	VoidedReason       int    `json:"voidedReason"`
+}
+
+func listVoidedReceiptsGoogleWithIDs(ctx context.Context, httpc *http.Client, packageName, token string) ([]ListVoidedReceiptsGoogleVoidedPurchase, error) {
+	if len(token) < 1 {
+		return nil, errors.New("'token' must not be empty")
+	}
+
+	voidedPurchases := make([]ListVoidedReceiptsGoogleVoidedPurchase, 0)
+	var nextPageToken string
+	for {
+		var err error
+		var newVoidedPurchases []ListVoidedReceiptsGoogleVoidedPurchase
+		newVoidedPurchases, nextPageToken, err = requestVoidedTransactionsGoogle(ctx, httpc, packageName, token, nextPageToken)
+		if err != nil {
+			return nil, err
+		}
+		voidedPurchases = append(voidedPurchases, newVoidedPurchases...)
+
+		if nextPageToken == "" {
+			break
+		}
+	}
+
+	return voidedPurchases, nil
+}
+
+func requestVoidedTransactionsGoogle(ctx context.Context, httpc *http.Client, packageName, token, nextPageToken string) ([]ListVoidedReceiptsGoogleVoidedPurchase, string, error) {
+	u := &url.URL{
+		Host:     "androidpublisher.googleapis.com",
+		Path:     fmt.Sprintf("androidpublisher/v3/applications/%s/purchases/voidedpurchases", packageName),
+		RawQuery: fmt.Sprintf("access_token=%s&type=1", token),
+		Scheme:   "https",
+	}
+	if nextPageToken != "" {
+		u.RawQuery = fmt.Sprintf("access_token=%s&type=1&pageSelection.token=%s", token, nextPageToken)
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := httpc.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var voidedReceipts []ListVoidedReceiptsGoogleVoidedPurchase
+	var pageToken string
+
+	switch resp.StatusCode {
+	case 200:
+		voidedReceiptsResponse := &listVoidedReceiptsGoogleResponse{}
+		if err = json.Unmarshal(buf, &voidedReceiptsResponse); err != nil {
+			return nil, "", err
+		}
+		if voidedReceiptsResponse.VoidedPurchases != nil {
+			voidedReceipts = voidedReceiptsResponse.VoidedPurchases
+		} else {
+			voidedReceipts = make([]ListVoidedReceiptsGoogleVoidedPurchase, 0)
+		}
+		pageToken = voidedReceiptsResponse.TokenPagination.NextPageToken
+	default:
+		return nil, "", fmt.Errorf("failed to retrieve Google voided purchases - status: %d, payload: %s", resp.StatusCode, string(buf))
+	}
+
+	return voidedReceipts, pageToken, nil
 }
 
 // https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptions#get

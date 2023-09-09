@@ -33,7 +33,7 @@ func TestJsLoggerInfo(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'info';
@@ -59,7 +59,7 @@ func TestJsLoggerWarn(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'warn';
@@ -85,7 +85,7 @@ func TestJsLoggerError(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'error';
@@ -111,7 +111,7 @@ func TestJsLoggerDebug(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'debug';
@@ -137,7 +137,7 @@ func TestJsLoggerWithField(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'info';
@@ -164,7 +164,7 @@ func TestJsLoggerWithFields(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to instantiate jsLogger")
 	}
-	r.Set("logger", jsLoggerInst)
+	_ = r.Set("logger", jsLoggerInst)
 
 	SCRIPT := `
 var s = 'info';
@@ -188,8 +188,9 @@ l2.info('logger two')
 
 	secondLog := logs.All()[1]
 	assert.Equal(t, secondLog.Message, "logger two")
-	assert.EqualValues(t, []zap.Field{
-		{Key: "logger", String: "l2", Type: zapcore.StringType},
-		{Key: "n", Integer: 1, Type: zapcore.Int64Type},
-	}, secondLog.Context)
+	assert.Len(t, secondLog.Context, 2)
+	assert.Contains(t, secondLog.Context,
+		zap.Field{Key: "logger", String: "l2", Type: zapcore.StringType})
+	assert.Contains(t, secondLog.Context,
+		zap.Field{Key: "n", Integer: 1, Type: zapcore.Int64Type})
 }

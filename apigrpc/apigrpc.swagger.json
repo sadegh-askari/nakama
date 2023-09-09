@@ -33,6 +33,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -70,6 +71,28 @@
           "Nakama"
         ]
       },
+      "delete": {
+        "summary": "Delete the current user's account.",
+        "operationId": "Nakama_DeleteAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Nakama"
+        ]
+      },
       "put": {
         "summary": "Update fields in the current user's account.",
         "operationId": "Nakama_UpdateAccount",
@@ -77,6 +100,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -90,6 +114,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Update a user's account details.",
             "in": "body",
             "required": true,
             "schema": {
@@ -122,7 +147,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Apple account details.",
             "in": "body",
             "required": true,
@@ -175,7 +200,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The custom account details.",
             "in": "body",
             "required": true,
@@ -228,7 +253,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The device account details.",
             "in": "body",
             "required": true,
@@ -281,7 +306,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The email account details.",
             "in": "body",
             "required": true,
@@ -334,7 +359,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Facebook account details.",
             "in": "body",
             "required": true,
@@ -394,7 +419,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Facebook Instant Game account details.",
             "in": "body",
             "required": true,
@@ -447,7 +472,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Game Center account details.",
             "in": "body",
             "required": true,
@@ -500,7 +525,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Google account details.",
             "in": "body",
             "required": true,
@@ -553,7 +578,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Steam account details.",
             "in": "body",
             "required": true,
@@ -601,6 +626,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -614,6 +640,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Apple Sign In token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -634,6 +661,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -647,6 +675,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a custom ID to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -667,6 +696,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -680,6 +710,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a device to the server. Used with authenticate/link/unlink and user.",
             "in": "body",
             "required": true,
             "schema": {
@@ -700,6 +731,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -713,6 +745,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send an email with password to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -733,6 +766,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -745,7 +779,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Facebook account details.",
             "in": "body",
             "required": true,
@@ -774,6 +808,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -787,6 +822,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Facebook Instant Game token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -807,6 +843,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -820,6 +857,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send Apple's Game Center account credentials to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -840,6 +878,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -853,6 +892,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Google token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -873,6 +913,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -886,6 +927,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Link Steam to the current user's account.",
             "in": "body",
             "required": true,
             "schema": {
@@ -919,6 +961,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Authenticate against the server with a refresh token.",
             "in": "body",
             "required": true,
             "schema": {
@@ -944,6 +987,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -957,6 +1001,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Apple Sign In token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -977,6 +1022,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -990,6 +1036,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a custom ID to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1010,6 +1057,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1023,6 +1071,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a device to the server. Used with authenticate/link/unlink and user.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1043,6 +1092,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1056,6 +1106,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send an email with password to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1076,6 +1127,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1089,6 +1141,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Facebook token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1109,6 +1162,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1122,6 +1176,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Facebook Instant Game token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1142,6 +1197,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1155,6 +1211,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send Apple's Game Center account credentials to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1175,6 +1232,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1188,6 +1246,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Google token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1208,6 +1267,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1221,6 +1281,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Send a Steam token to the server. Used with authenticate/link/unlink.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1295,6 +1356,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1308,6 +1370,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Represents an event to be passed through the server to registered event handlers.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1374,6 +1437,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1419,6 +1483,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1466,6 +1531,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1513,6 +1579,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1525,7 +1592,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Facebook account details.",
             "in": "body",
             "required": true,
@@ -1554,6 +1621,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1566,7 +1634,7 @@
         },
         "parameters": [
           {
-            "name": "body",
+            "name": "account",
             "description": "The Facebook account details.",
             "in": "body",
             "required": true,
@@ -1630,14 +1698,14 @@
           },
           {
             "name": "langTag",
-            "description": "Language tag filter.",
+            "description": "Language tag filter",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "members",
-            "description": "Number of group members.",
+            "description": "Number of group members",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1675,6 +1743,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Create a group with the current user as owner.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1695,6 +1764,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1725,6 +1795,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1765,6 +1836,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1808,6 +1880,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1851,6 +1924,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1894,6 +1968,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1926,6 +2001,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -1969,6 +2045,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2001,6 +2078,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2211,6 +2289,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "List user subscriptions.",
             "in": "body",
             "required": true,
             "schema": {
@@ -2393,6 +2472,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2442,7 +2522,7 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "record",
             "description": "Record input.",
             "in": "body",
             "required": true,
@@ -2504,6 +2584,13 @@
             "required": false,
             "type": "string",
             "format": "int64"
+          },
+          {
+            "name": "cursor",
+            "description": "A next or previous page cursor.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2627,6 +2714,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2732,7 +2820,7 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "payload",
             "description": "The payload of the function which must be a JSON object.",
             "in": "body",
             "required": true,
@@ -2767,6 +2855,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2780,6 +2869,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Log out a session, invalidate a refresh token, or log out all sessions/refresh tokens for a user.",
             "in": "body",
             "required": true,
             "schema": {
@@ -2813,6 +2903,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Batch get storage objects.",
             "in": "body",
             "required": true,
             "schema": {
@@ -2844,6 +2935,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Write objects to the storage engine.",
             "in": "body",
             "required": true,
             "schema": {
@@ -2864,6 +2956,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -2877,6 +2970,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Batch delete storage objects.",
             "in": "body",
             "required": true,
             "schema": {
@@ -3134,6 +3228,37 @@
           "Nakama"
         ]
       },
+      "delete": {
+        "summary": "Delete a tournament record.",
+        "operationId": "Nakama_DeleteTournamentRecord",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tournamentId",
+            "description": "The tournament ID to delete from.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Nakama"
+        ]
+      },
       "post": {
         "summary": "Write a record to a tournament.",
         "operationId": "Nakama_WriteTournamentRecord2",
@@ -3160,7 +3285,7 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "record",
             "description": "Record input.",
             "in": "body",
             "required": true,
@@ -3199,7 +3324,7 @@
             "type": "string"
           },
           {
-            "name": "body",
+            "name": "record",
             "description": "Record input.",
             "in": "body",
             "required": true,
@@ -3221,6 +3346,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
+              "type": "object",
               "properties": {}
             }
           },
@@ -3293,6 +3419,13 @@
             "required": false,
             "type": "string",
             "format": "int64"
+          },
+          {
+            "name": "cursor",
+            "description": "A next or previous page cursor.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -3522,12 +3655,12 @@
         "verifyTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user's email was verified."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's email was verified."
         },
         "disableTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user's account was disabled/banned."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user's account was disabled/banned."
         }
       },
       "description": "A user with additional account details. Always the current user."
@@ -3741,12 +3874,12 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the message was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the message was created."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the message was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the message was last updated."
         },
         "persistent": {
           "type": "boolean",
@@ -3969,12 +4102,12 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the group was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the group was created."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the group was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the group was last updated."
         }
       },
       "description": "A group in the server."
@@ -4050,17 +4183,17 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record was created."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record was updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record was updated."
         },
         "expiryTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the leaderboard record expires."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the leaderboard record expires."
         },
         "rank": {
           "type": "string",
@@ -4099,6 +4232,11 @@
         "prevCursor": {
           "type": "string",
           "description": "The cursor to send when retrieving the previous page, if any."
+        },
+        "rankCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The total number of ranks available."
         }
       },
       "description": "A set of leaderboard records, may be part of a leaderboard records page or a batch of individual records."
@@ -4204,7 +4342,7 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the notification was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the notification was created."
         },
         "persistent": {
           "type": "boolean",
@@ -4376,12 +4514,12 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the object was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was created."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the object was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the object was last updated."
         }
       },
       "description": "An object within the storage engine."
@@ -4555,17 +4693,17 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the tournament was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the tournament was created."
         },
         "startTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the tournament will start."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the tournament will start."
         },
         "endTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the tournament will be stopped."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the tournament will be stopped."
         },
         "duration": {
           "type": "integer",
@@ -4585,6 +4723,10 @@
         "operator": {
           "$ref": "#/definitions/apiOperator",
           "description": "Operator."
+        },
+        "authoritative": {
+          "type": "boolean",
+          "description": "Whether the leaderboard was created authoritatively or not."
         }
       },
       "description": "A tournament on the server."
@@ -4630,6 +4772,11 @@
         "prevCursor": {
           "type": "string",
           "description": "The cursor to send when retrieving the previous page (optional)."
+        },
+        "rankCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The total number of ranks available."
         }
       },
       "description": "A set of tournament records which may be part of a tournament records page or a batch of individual records."
@@ -4757,12 +4904,12 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user was created."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user was created."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The UNIX time when the user was last updated."
+          "description": "The UNIX time (for gRPC clients) or ISO string (for REST clients) when the user was last updated."
         },
         "facebookInstantGameId": {
           "type": "string",
@@ -4904,6 +5051,10 @@
     "apiValidatedPurchase": {
       "type": "object",
       "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Purchase User ID."
+        },
         "productId": {
           "type": "string",
           "description": "Purchase Product ID."
@@ -4919,17 +5070,22 @@
         "purchaseTime": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the purchase was done."
+          "description": "Timestamp when the purchase was done."
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the receipt validation was stored in DB."
+          "description": "Timestamp when the receipt validation was stored in DB."
         },
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "UNIX Timestamp when the receipt validation was updated in DB."
+          "description": "Timestamp when the receipt validation was updated in DB."
+        },
+        "refundTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Timestamp when the purchase was refunded. Set to UNIX"
         },
         "providerResponse": {
           "type": "string",
@@ -4949,6 +5105,10 @@
     "apiValidatedSubscription": {
       "type": "object",
       "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Subscription User ID."
+        },
         "productId": {
           "type": "string",
           "description": "Purchase Product ID."
@@ -4984,6 +5144,19 @@
           "type": "string",
           "format": "date-time",
           "description": "Subscription expiration time. The subscription can still be auto-renewed to extend the expiration time further."
+        },
+        "refundTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Subscription refund time. If this time is set, the subscription was refunded."
+        },
+        "providerResponse": {
+          "type": "string",
+          "description": "Raw provider validation response body."
+        },
+        "providerNotification": {
+          "type": "string",
+          "description": "Raw provider notification body."
         },
         "active": {
           "type": "boolean",

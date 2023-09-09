@@ -19,8 +19,7 @@ import (
 	"crypto"
 	"database/sql"
 	"fmt"
-	"github.com/gofrs/uuid"
-	"io/ioutil"
+	"io"
 	"math"
 	"net"
 	"net/http"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -37,6 +37,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -142,11 +143,13 @@ type ConsoleServer struct {
 	streamManager        StreamManager
 	metrics              Metrics
 	sessionCache         SessionCache
+	sessionRegistry      SessionRegistry
 	consoleSessionCache  SessionCache
 	loginAttemptCache    LoginAttemptCache
 	statusRegistry       *StatusRegistry
 	matchRegistry        MatchRegistry
 	statusHandler        StatusHandler
+	storageIndex         StorageIndex
 	runtimeInfo          *RuntimeInfo
 	configWarnings       map[string]string
 	serverVersion        string
@@ -155,13 +158,14 @@ type ConsoleServer struct {
 	grpcGatewayServer    *http.Server
 	leaderboardCache     LeaderboardCache
 	leaderboardRankCache LeaderboardRankCache
+	leaderboardScheduler LeaderboardScheduler
 	api                  *ApiServer
 	rpcMethodCache       *rpcReflectCache
 	cookie               string
 	httpClient           *http.Client
 }
 
-func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, config Config, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, sessionCache SessionCache, consoleSessionCache SessionCache, loginAttemptCache LoginAttemptCache, statusRegistry *StatusRegistry, statusHandler StatusHandler, runtimeInfo *RuntimeInfo, matchRegistry MatchRegistry, configWarnings map[string]string, serverVersion string, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, api *ApiServer, cookie string) *ConsoleServer {
+func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.DB, config Config, tracker Tracker, router MessageRouter, streamManager StreamManager, metrics Metrics, sessionRegistry SessionRegistry, sessionCache SessionCache, consoleSessionCache SessionCache, loginAttemptCache LoginAttemptCache, statusRegistry *StatusRegistry, statusHandler StatusHandler, runtimeInfo *RuntimeInfo, matchRegistry MatchRegistry, configWarnings map[string]string, serverVersion string, leaderboardCache LeaderboardCache, leaderboardRankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, storageIndex StorageIndex, api *ApiServer, runtime *Runtime, cookie string) *ConsoleServer {
 	var gatewayContextTimeoutMs string
 	if config.GetConsole().IdleTimeoutMs > 500 {
 		// Ensure the GRPC Gateway timeout is just under the idle timeout (if possible) to ensure it has priority.
@@ -173,7 +177,7 @@ func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.D
 	serverOpts := []grpc.ServerOption{
 		//grpc.StatsHandler(&ocgrpc.ServerHandler{IsPublicEndpoint: true}),
 		grpc.MaxRecvMsgSize(int(config.GetConsole().MaxMessageSizeBytes)),
-		grpc.UnaryInterceptor(consoleInterceptorFunc(logger, config, consoleSessionCache)),
+		grpc.UnaryInterceptor(consoleInterceptorFunc(logger, config, consoleSessionCache, loginAttemptCache)),
 	}
 	grpcServer := grpc.NewServer(serverOpts...)
 
@@ -187,6 +191,7 @@ func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.D
 		router:               router,
 		streamManager:        streamManager,
 		metrics:              metrics,
+		sessionRegistry:      sessionRegistry,
 		sessionCache:         sessionCache,
 		consoleSessionCache:  consoleSessionCache,
 		loginAttemptCache:    loginAttemptCache,
@@ -200,6 +205,8 @@ func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.D
 		runtimeInfo:          runtimeInfo,
 		leaderboardCache:     leaderboardCache,
 		leaderboardRankCache: leaderboardRankCache,
+		leaderboardScheduler: leaderboardScheduler,
+		storageIndex:         storageIndex,
 		api:                  api,
 		cookie:               cookie,
 		httpClient:           &http.Client{Timeout: 5 * time.Second},
@@ -247,7 +254,7 @@ func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.D
 			grpc.MaxCallSendMsgSize(int(config.GetConsole().MaxMessageSizeBytes)),
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
 		),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	if err := console.RegisterConsoleHandlerFromEndpoint(ctx, grpcGateway, dialAddr, dialOpts); err != nil {
 		startupLogger.Fatal("Console server gateway registration failed", zap.Error(err))
@@ -259,7 +266,7 @@ func StartConsoleServer(logger *zap.Logger, startupLogger *zap.Logger, db *sql.D
 	// Register public subscription callback endpoints
 	if config.GetIAP().Apple.NotificationsEndpointId != "" {
 		endpoint := fmt.Sprintf("/v2/console/apple/subscriptions/%s", config.GetIAP().Apple.NotificationsEndpointId)
-		grpcGatewayRouter.HandleFunc(endpoint, appleNotificationHandler(logger, db))
+		grpcGatewayRouter.HandleFunc(endpoint, appleNotificationHandler(logger, db, runtime.PurchaseNotificationApple(), runtime.SubscriptionNotificationApple()))
 		logger.Info("Registered endpoint for Apple subscription notifications callback", zap.String("endpoint", endpoint))
 	}
 
@@ -357,7 +364,7 @@ SELECT collection FROM t WHERE collection IS NOT NULL`
 			sort.Strings(collections)
 			collectionSetCache.Store(collections)
 
-			elapsed := time.Now().Sub(startAt)
+			elapsed := time.Since(startAt)
 			elapsed *= 20
 			if elapsed < time.Minute {
 				elapsed = time.Minute
@@ -394,7 +401,7 @@ func registerDashboardHandlers(logger *zap.Logger, router *mux.Router) {
 			return
 		}
 
-		indexBytes, err := ioutil.ReadAll(indexFile)
+		indexBytes, err := io.ReadAll(indexFile)
 		if err != nil {
 			logger.Error("Failed to read index file.", zap.Error(err))
 			w.WriteHeader(http.StatusNotFound)
@@ -403,8 +410,7 @@ func registerDashboardHandlers(logger *zap.Logger, router *mux.Router) {
 
 		w.Header().Add("Cache-Control", "no-cache")
 		w.Header().Set("X-Frame-Options", "deny")
-		w.Write(indexBytes)
-		return
+		_, _ = w.Write(indexBytes)
 	}
 
 	router.Path("/").HandlerFunc(indexFn)
@@ -435,7 +441,7 @@ func (s *ConsoleServer) Stop() {
 	s.grpcServer.GracefulStop()
 }
 
-func consoleInterceptorFunc(logger *zap.Logger, config Config, sessionCache SessionCache) func(context.Context, interface{}, *grpc.UnaryServerInfo, grpc.UnaryHandler) (interface{}, error) {
+func consoleInterceptorFunc(logger *zap.Logger, config Config, sessionCache SessionCache, loginAttmeptCache LoginAttemptCache) func(context.Context, interface{}, *grpc.UnaryServerInfo, grpc.UnaryHandler) (interface{}, error) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if info.FullMethod == "/nakama.console.Console/Authenticate" {
 			// Skip authentication check for Login endpoint.
@@ -461,7 +467,7 @@ func consoleInterceptorFunc(logger *zap.Logger, config Config, sessionCache Sess
 			return nil, status.Error(codes.Unauthenticated, "Console authentication required.")
 		}
 
-		if ctx, ok = checkAuth(ctx, config, auth[0], sessionCache); !ok {
+		if ctx, ok = checkAuth(ctx, logger, config, auth[0], sessionCache, loginAttmeptCache); !ok {
 			return nil, status.Error(codes.Unauthenticated, "Console authentication invalid.")
 		}
 		role := ctx.Value(ctxConsoleRoleKey{}).(console.UserRole)
@@ -475,7 +481,7 @@ func consoleInterceptorFunc(logger *zap.Logger, config Config, sessionCache Sess
 	}
 }
 
-func checkAuth(ctx context.Context, config Config, auth string, sessionCache SessionCache) (context.Context, bool) {
+func checkAuth(ctx context.Context, logger *zap.Logger, config Config, auth string, sessionCache SessionCache, loginAttemptCache LoginAttemptCache) (context.Context, bool) {
 	const basicPrefix = "Basic "
 	const bearerPrefix = "Bearer "
 
@@ -485,9 +491,24 @@ func checkAuth(ctx context.Context, config Config, auth string, sessionCache Ses
 		if !ok {
 			return ctx, false
 		}
-
-		if username != config.GetConsole().Username || password != config.GetConsole().Password {
-			// Username and/or password do not match.
+		ip, _ := extractClientAddressFromContext(logger, ctx)
+		if !loginAttemptCache.Allow(username, ip) {
+			return ctx, false
+		}
+		if username == config.GetConsole().Username {
+			if password != config.GetConsole().Password {
+				// Admin password does not match.
+				if lockout, until := loginAttemptCache.Add(config.GetConsole().Username, ip); lockout != LockoutTypeNone {
+					switch lockout {
+					case LockoutTypeAccount:
+						logger.Info(fmt.Sprintf("Console admin account locked until %v.", until))
+					case LockoutTypeIp:
+						logger.Info(fmt.Sprintf("Console admin IP locked until %v.", until))
+					}
+				}
+				return ctx, false
+			}
+		} else {
 			return ctx, false
 		}
 

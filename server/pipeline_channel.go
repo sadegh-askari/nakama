@@ -15,21 +15,19 @@
 package server
 
 import (
-	"database/sql"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
-	"github.com/jackc/pgtype"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -45,8 +43,6 @@ const (
 	ChannelMessageTypeGroupDemote
 )
 
-var ErrChannelMessageUpdateNotFound = errors.New("channel message not found")
-
 var controlCharsRegex = regexp.MustCompilePOSIX("[[:cntrl:]]+")
 
 func (p *Pipeline) channelJoin(logger *zap.Logger, session Session, envelope *rtapi.Envelope) (bool, *rtapi.Envelope) {
@@ -55,13 +51,13 @@ func (p *Pipeline) channelJoin(logger *zap.Logger, session Session, envelope *rt
 	channelID, stream, err := BuildChannelId(session.Context(), logger, p.db, session.UserID(), incoming.Target, rtapi.ChannelJoin_Type(incoming.Type))
 	if err != nil {
 		if errors.Is(err, runtime.ErrInvalidChannelTarget) || errors.Is(err, runtime.ErrInvalidChannelType) {
-			session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 				Code:    int32(rtapi.Error_BAD_INPUT),
 				Message: err.Error(),
 			}}}, true)
 			return false, nil
 		} else {
-			session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 				Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
 				Message: err.Error(),
 			}}}, true)
@@ -77,7 +73,7 @@ func (p *Pipeline) channelJoin(logger *zap.Logger, session Session, envelope *rt
 	}
 	success, isNew := p.tracker.Track(session.Context(), session.ID(), stream, session.UserID(), meta, false)
 	if !success {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
 			Message: "Error joining channel",
 		}}}, true)
@@ -165,7 +161,7 @@ func (p *Pipeline) channelJoin(logger *zap.Logger, session Session, envelope *rt
 	}
 
 	out := &rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Channel{Channel: channel}}
-	session.Send(out, true)
+	_ = session.Send(out, true)
 
 	return true, out
 }
@@ -175,7 +171,7 @@ func (p *Pipeline) channelLeave(logger *zap.Logger, session Session, envelope *r
 
 	streamConversionResult, err := ChannelIdToStream(incoming.ChannelId)
 	if err != nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Invalid channel identifier",
 		}}}, true)
@@ -185,7 +181,7 @@ func (p *Pipeline) channelLeave(logger *zap.Logger, session Session, envelope *r
 	p.tracker.Untrack(session.ID(), streamConversionResult.Stream, session.UserID())
 
 	out := &rtapi.Envelope{Cid: envelope.Cid}
-	session.Send(out, true)
+	_ = session.Send(out, true)
 
 	return true, out
 }
@@ -195,16 +191,24 @@ func (p *Pipeline) channelMessageSend(logger *zap.Logger, session Session, envel
 
 	streamConversionResult, err := ChannelIdToStream(incoming.ChannelId)
 	if err != nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Invalid channel identifier",
 		}}}, true)
 		return false, nil
 	}
 
+	if maybeJSON := []byte(incoming.Content); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Message content must be a valid JSON object",
+		}}}, true)
+		return false, nil
+	}
+
 	meta := p.tracker.GetLocalBySessionIDStreamUserID(session.ID(), streamConversionResult.Stream, session.UserID())
 	if meta == nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Must join channel before sending messages",
 		}}}, true)
@@ -213,14 +217,8 @@ func (p *Pipeline) channelMessageSend(logger *zap.Logger, session Session, envel
 
 	ack, err := ChannelMessageSend(session.Context(), p.logger, p.db, p.router, streamConversionResult.Stream, incoming.ChannelId, incoming.Content, session.UserID().String(), session.Username(), meta.Persistence)
 	switch err {
-	case errInvalidMessageContent:
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-			Code:    int32(rtapi.Error_BAD_INPUT),
-			Message: "Message content must be a valid JSON object",
-		}}}, true)
-		return false, nil
-	case errMessagePersist:
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+	case errChannelMessagePersist:
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
 			Message: "Could not persist message to channel history",
 		}}}, true)
@@ -228,7 +226,7 @@ func (p *Pipeline) channelMessageSend(logger *zap.Logger, session Session, envel
 	}
 
 	out := &rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_ChannelMessageAck{ChannelMessageAck: ack}}
-	session.Send(out, true)
+	_ = session.Send(out, true)
 
 	return true, out
 }
@@ -236,50 +234,8 @@ func (p *Pipeline) channelMessageSend(logger *zap.Logger, session Session, envel
 func (p *Pipeline) channelMessageUpdate(logger *zap.Logger, session Session, envelope *rtapi.Envelope) (bool, *rtapi.Envelope) {
 	incoming := envelope.GetChannelMessageUpdate()
 
-	streamConversionResult, err := ChannelIdToStream(incoming.ChannelId)
-	if err != nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-			Code:    int32(rtapi.Error_BAD_INPUT),
-			Message: "Invalid channel identifier",
-		}}}, true)
-		return false, nil
-	}
-
-	meta := p.tracker.GetLocalBySessionIDStreamUserID(session.ID(), streamConversionResult.Stream, session.UserID())
-	if meta == nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-			Code:    int32(rtapi.Error_BAD_INPUT),
-			Message: "Must join channel before updating messages",
-		}}}, true)
-		return false, nil
-	}
-
-	ack, err := ChannelMessageUpdate(session.Context(), p.logger, p.db, p.router, streamConversionResult.Stream, incoming.ChannelId, incoming.MessageId, incoming.Content, session.UserID().String(), session.Username(), meta.Persistence)
-	switch err {
-	case errInvalidMessageId, errInvalidMessageContent, errMessageNotFound:
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-			Code:    int32(rtapi.Error_BAD_INPUT),
-			Message: err.Error(),
-		}}}, true)
-		return false, nil
-	case errMessagePersist:
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-			Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
-			Message: "Could not persist message update to channel history",
-		}}}, true)
-	}
-
-	out := &rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_ChannelMessageAck{ChannelMessageAck: ack}}
-	session.Send(out, true)
-
-	return true, out
-}
-
-func (p *Pipeline) channelMessageRemove(logger *zap.Logger, session Session, envelope *rtapi.Envelope) (bool, *rtapi.Envelope) {
-	incoming := envelope.GetChannelMessageRemove()
-
 	if _, err := uuid.FromString(incoming.MessageId); err != nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Invalid message identifier",
 		}}}, true)
@@ -288,7 +244,65 @@ func (p *Pipeline) channelMessageRemove(logger *zap.Logger, session Session, env
 
 	streamConversionResult, err := ChannelIdToStream(incoming.ChannelId)
 	if err != nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Invalid channel identifier",
+		}}}, true)
+		return false, nil
+	}
+
+	if maybeJSON := []byte(incoming.Content); !json.Valid(maybeJSON) || bytes.TrimSpace(maybeJSON)[0] != byteBracket {
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Message content must be a valid JSON object",
+		}}}, true)
+		return false, nil
+	}
+
+	meta := p.tracker.GetLocalBySessionIDStreamUserID(session.ID(), streamConversionResult.Stream, session.UserID())
+	if meta == nil {
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Must join channel before updating messages",
+		}}}, true)
+		return false, nil
+	}
+
+	ack, err := ChannelMessageUpdate(session.Context(), p.logger, p.db, p.router, streamConversionResult.Stream, incoming.ChannelId, incoming.MessageId, incoming.Content, session.UserID().String(), session.Username(), meta.Persistence)
+	switch err {
+	case errChannelMessageNotFound:
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Could not find message to update in channel history",
+		}}}, true)
+		return false, nil
+	case errChannelMessagePersist:
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
+			Message: "Could not persist message update to channel history",
+		}}}, true)
+	}
+
+	out := &rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_ChannelMessageAck{ChannelMessageAck: ack}}
+	_ = session.Send(out, true)
+
+	return true, out
+}
+
+func (p *Pipeline) channelMessageRemove(logger *zap.Logger, session Session, envelope *rtapi.Envelope) (bool, *rtapi.Envelope) {
+	incoming := envelope.GetChannelMessageRemove()
+
+	if _, err := uuid.FromString(incoming.MessageId); err != nil {
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Invalid message identifier",
+		}}}, true)
+		return false, nil
+	}
+
+	streamConversionResult, err := ChannelIdToStream(incoming.ChannelId)
+	if err != nil {
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Invalid channel identifier",
 		}}}, true)
@@ -297,82 +311,30 @@ func (p *Pipeline) channelMessageRemove(logger *zap.Logger, session Session, env
 
 	meta := p.tracker.GetLocalBySessionIDStreamUserID(session.ID(), streamConversionResult.Stream, session.UserID())
 	if meta == nil {
-		session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
 			Code:    int32(rtapi.Error_BAD_INPUT),
 			Message: "Must join channel before removing messages",
 		}}}, true)
 		return false, nil
 	}
 
-	ts := time.Now().Unix()
-	message := &api.ChannelMessage{
-		ChannelId:  incoming.ChannelId,
-		MessageId:  incoming.MessageId,
-		Code:       &wrapperspb.Int32Value{Value: ChannelMessageTypeChatRemove},
-		SenderId:   session.UserID().String(),
-		Username:   session.Username(),
-		Content:    "{}",
-		CreateTime: &timestamppb.Timestamp{Seconds: ts},
-		UpdateTime: &timestamppb.Timestamp{Seconds: ts},
-		Persistent: &wrapperspb.BoolValue{Value: meta.Persistence},
-	}
-	switch streamConversionResult.Stream.Mode {
-	case StreamModeChannel:
-		message.RoomName = streamConversionResult.Stream.Label
-	case StreamModeGroup:
-		message.GroupId = streamConversionResult.Stream.Subject.String()
-	case StreamModeDM:
-		message.UserIdOne = streamConversionResult.Stream.Subject.String()
-		message.UserIdTwo = streamConversionResult.Stream.Subcontext.String()
-	}
-
-	if meta.Persistence {
-		// First find and remove the referenced message.
-		var dbCreateTime pgtype.Timestamptz
-		query := "DELETE FROM message WHERE id = $1 AND sender_id = $2 RETURNING create_time"
-		err := p.db.QueryRowContext(session.Context(), query, incoming.MessageId, message.SenderId).Scan(&dbCreateTime)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-					Code:    int32(rtapi.Error_BAD_INPUT),
-					Message: "Could not find message to remove in channel history",
-				}}}, true)
-				return false, nil
-			}
-			logger.Error("Error persisting channel message remove", zap.Error(err))
-			session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
-				Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
-				Message: "Could not persist message remove to channel history",
-			}}}, true)
-			return false, nil
-		}
-		// Replace the message create time with the real one from DB.
-		message.CreateTime = &timestamppb.Timestamp{Seconds: dbCreateTime.Time.Unix()}
-	}
-
-	ack := &rtapi.ChannelMessageAck{
-		ChannelId:  message.ChannelId,
-		MessageId:  message.MessageId,
-		Code:       message.Code,
-		Username:   message.Username,
-		CreateTime: message.CreateTime,
-		UpdateTime: message.UpdateTime,
-		Persistent: message.Persistent,
-	}
-	switch streamConversionResult.Stream.Mode {
-	case StreamModeChannel:
-		ack.RoomName = streamConversionResult.Stream.Label
-	case StreamModeGroup:
-		ack.GroupId = streamConversionResult.Stream.Subject.String()
-	case StreamModeDM:
-		ack.UserIdOne = streamConversionResult.Stream.Subject.String()
-		ack.UserIdTwo = streamConversionResult.Stream.Subcontext.String()
+	ack, err := ChannelMessageRemove(session.Context(), p.logger, p.db, p.router, streamConversionResult.Stream, incoming.ChannelId, incoming.MessageId, session.UserID().String(), session.Username(), meta.Persistence)
+	switch err {
+	case errChannelMessageNotFound:
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_BAD_INPUT),
+			Message: "Could not find message to remove in channel history",
+		}}}, true)
+		return false, nil
+	case errChannelMessagePersist:
+		_ = session.Send(&rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_Error{Error: &rtapi.Error{
+			Code:    int32(rtapi.Error_RUNTIME_EXCEPTION),
+			Message: "Could not persist message remove to channel history",
+		}}}, true)
 	}
 
 	out := &rtapi.Envelope{Cid: envelope.Cid, Message: &rtapi.Envelope_ChannelMessageAck{ChannelMessageAck: ack}}
-	session.Send(out, true)
-
-	p.router.SendToStream(logger, streamConversionResult.Stream, &rtapi.Envelope{Message: &rtapi.Envelope_ChannelMessage{ChannelMessage: message}}, true)
+	_ = session.Send(out, true)
 
 	return true, out
 }

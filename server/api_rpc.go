@@ -17,12 +17,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/gorilla/mux"
 	grpcgw "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/heroiclabs/nakama-common/api"
@@ -132,7 +132,7 @@ func (s *ApiServer) RpcFuncHttp(w http.ResponseWriter, r *http.Request) {
 	// Prepare input to function.
 	var payload string
 	if r.Method == "POST" {
-		b, err := ioutil.ReadAll(r.Body)
+		b, err := io.ReadAll(r.Body)
 		if err != nil {
 			// Request body too large.
 			if err.Error() == "http: request body too large" {
@@ -189,9 +189,7 @@ func (s *ApiServer) RpcFuncHttp(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		headers[k] = make([]string, 0, len(v))
-		for _, h := range v {
-			headers[k] = append(headers[k], h)
-		}
+		headers[k] = append(headers[k], v...)
 	}
 
 	// Execute the function.
