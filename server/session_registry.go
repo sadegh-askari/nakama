@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -64,8 +64,9 @@ type SessionRegistry interface {
 	Get(sessionID uuid.UUID) Session
 	Add(session Session)
 	Remove(sessionID uuid.UUID)
-	Disconnect(ctx context.Context, sessionID uuid.UUID, reason ...runtime.PresenceReason) error
+	Disconnect(ctx context.Context, sessionID uuid.UUID, ban bool, reason ...runtime.PresenceReason) error
 	SingleSession(ctx context.Context, tracker Tracker, userID, sessionID uuid.UUID)
+	Range(fn func(session Session) bool)
 }
 
 type LocalSessionRegistry struct {
@@ -110,7 +111,7 @@ func (r *LocalSessionRegistry) Remove(sessionID uuid.UUID) {
 	r.metrics.GaugeSessions(float64(count))
 }
 
-func (r *LocalSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID, reason ...runtime.PresenceReason) error {
+func (r *LocalSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID, ban bool, reason ...runtime.PresenceReason) error {
 	session, ok := r.sessions.Load(sessionID)
 	if ok {
 		// No need to remove the session from the map, session.Close() will do that.
@@ -118,7 +119,27 @@ func (r *LocalSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UU
 		if len(reason) > 0 {
 			reasonOverride = reason[0]
 		}
-		session.Close("server-side session disconnect", reasonOverride)
+
+		if ban {
+			session.Close("server-side session disconnect", runtime.PresenceReasonDisconnect,
+				&rtapi.Envelope{Message: &rtapi.Envelope_Notifications{
+					Notifications: &rtapi.Notifications{
+						Notifications: []*api.Notification{
+							{
+								Id:         uuid.Must(uuid.NewV4()).String(),
+								Subject:    "banned",
+								Content:    "{}",
+								Code:       NotificationCodeUserBanned,
+								SenderId:   "",
+								CreateTime: &timestamppb.Timestamp{Seconds: time.Now().Unix()},
+								Persistent: false,
+							},
+						},
+					},
+				}})
+		} else {
+			session.Close("server-side session disconnect", reasonOverride)
+		}
 	}
 	return nil
 }
@@ -151,4 +172,10 @@ func (r *LocalSessionRegistry) SingleSession(ctx context.Context, tracker Tracke
 				}})
 		}
 	}
+}
+
+func (r *LocalSessionRegistry) Range(fn func(Session) bool) {
+	r.sessions.Range(func(id uuid.UUID, session Session) bool {
+		return fn(session)
+	})
 }

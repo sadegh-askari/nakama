@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/jackc/pgtype"
 	"go.uber.org/zap"
@@ -136,13 +136,7 @@ LIMIT $2`
 
 	if len(users) < count {
 		// Need more users.
-		query := `
-SELECT id, username, display_name, avatar_url, lang_tag, location, timezone, metadata,
-	apple_id, facebook_id, facebook_instant_game_id, google_id, gamecenter_id, steam_id, edge_count, create_time, update_time
-FROM users
-WHERE id > $1
-LIMIT $2`
-		rows, err := db.QueryContext(ctx, query, uuid.Nil.String(), count)
+		rows, err = db.QueryContext(ctx, query, uuid.Nil.String(), count)
 		if err != nil {
 			logger.Error("Error retrieving random user accounts.", zap.Error(err))
 			return nil, err
@@ -185,7 +179,7 @@ func DeleteUser(ctx context.Context, tx *sql.Tx, userID uuid.UUID) (int64, error
 	return res.RowsAffected()
 }
 
-func BanUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, sessionCache SessionCache, ids []uuid.UUID) error {
+func BanUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, config Config, sessionCache SessionCache, sessionRegistry SessionRegistry, tracker Tracker, ids []uuid.UUID) error {
 	statements := make([]string, 0, len(ids))
 	params := make([]interface{}, 0, len(ids))
 	for i, id := range ids {
@@ -201,6 +195,15 @@ func BanUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, sessionCache 
 	}
 
 	sessionCache.Ban(ids)
+
+	for _, id := range ids {
+		// Disconnect.
+		for _, presence := range tracker.ListPresenceIDByStream(PresenceStream{Mode: StreamModeNotifications, Subject: id}) {
+			if err = sessionRegistry.Disconnect(ctx, presence.SessionID, true); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

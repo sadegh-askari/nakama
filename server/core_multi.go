@@ -24,6 +24,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/runtime"
+	pgx "github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -149,13 +150,7 @@ func MultiUpdate(ctx context.Context, logger *zap.Logger, db *sql.DB, metrics Me
 	var storageWriteAcks []*api.StorageObjectAck
 	var walletUpdateResults []*runtime.WalletUpdateResult
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return nil, nil, err
-	}
-
-	if err = ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTxPgx(ctx, db, func(tx pgx.Tx) error {
 		storageWriteAcks = nil
 		walletUpdateResults = nil
 

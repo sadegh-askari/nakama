@@ -17,7 +17,7 @@ package server
 import (
 	"context"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -216,7 +216,7 @@ func (s *ApiServer) GetSubscription(ctx context.Context, in *api.GetSubscription
 		}
 	}
 
-	_, sub, err := GetSubscriptionByProductId(ctx, s.logger, s.db, userID.String(), in.ProductId)
+	sub, err := GetSubscriptionByProductId(ctx, s.logger, s.db, userID.String(), in.ProductId)
 	if err != nil {
 		if err == ErrSubscriptionNotFound {
 			return nil, status.Error(codes.NotFound, err.Error())

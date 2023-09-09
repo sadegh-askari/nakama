@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -27,7 +26,9 @@ import (
 
 	"github.com/heroiclabs/nakama/v3/flags"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"gopkg.in/yaml.v3"
 )
 
 // Config interface is the Nakama core configuration.
@@ -48,6 +49,8 @@ type Config interface {
 	GetLeaderboard() *LeaderboardConfig
 	GetMatchmaker() *MatchmakerConfig
 	GetIAP() *IAPConfig
+	GetGoogleAuth() *GoogleAuthConfig
+	GetSatori() *SatoriConfig
 
 	Clone() (Config, error)
 }
@@ -71,7 +74,7 @@ func ParseArgs(logger *zap.Logger, args []string) Config {
 	mainConfig := NewConfig(logger)
 	runtimeEnvironment := mainConfig.GetRuntime().Environment
 	for _, cfg := range configFilePath.Config {
-		data, err := ioutil.ReadFile(cfg)
+		data, err := os.ReadFile(cfg)
 		if err != nil {
 			logger.Fatal("Could not read config file", zap.String("path", cfg), zap.Error(err))
 		}
@@ -107,6 +110,14 @@ func ParseArgs(logger *zap.Logger, args []string) Config {
 		mainConfig.GetRuntime().Env = append(mainConfig.GetRuntime().Env, fmt.Sprintf("%v=%v", k, v))
 	}
 	sort.Strings(mainConfig.GetRuntime().Env)
+
+	if mainConfig.GetGoogleAuth() != nil && mainConfig.GetGoogleAuth().CredentialsJSON != "" {
+		cnf, err := google.ConfigFromJSON([]byte(mainConfig.GetGoogleAuth().CredentialsJSON))
+		if err != nil {
+			logger.Fatal("Failed to parse Google's credentials JSON", zap.Error(err))
+		}
+		mainConfig.GetGoogleAuth().OAuthConfig = cnf
+	}
 
 	return mainConfig
 }
@@ -299,6 +310,12 @@ func CheckConfig(logger *zap.Logger, config Config) map[string]string {
 		}
 	}
 
+	if config.GetIAP().Google.RefundCheckPeriodMin != 0 {
+		if config.GetIAP().Google.RefundCheckPeriodMin < 15 {
+			logger.Fatal("Google IAP refund check period must be >= 15 min")
+		}
+	}
+
 	configWarnings := make(map[string]string, 8)
 
 	// Log warnings for insecure default parameter values.
@@ -353,6 +370,17 @@ func CheckConfig(logger *zap.Logger, config Config) map[string]string {
 		configWarnings["runtime.read_only_globals"] = "Deprecated configuration parameter"
 	}
 
+	if l := len(config.GetSocket().ResponseHeaders); l > 0 {
+		config.GetSocket().Headers = make(map[string]string, l)
+		for _, header := range config.GetSocket().ResponseHeaders {
+			parts := strings.SplitN(header, "=", 2)
+			if len(parts) != 2 {
+				logger.Fatal("Response headers configuration invalid, format must be 'key=value'", zap.String("param", "socket.response_headers"))
+			}
+			config.GetSocket().Headers[parts[0]] = parts[1]
+		}
+	}
+
 	// Log warnings for SSL usage.
 	if config.GetSocket().SSLCertificate != "" && config.GetSocket().SSLPrivateKey == "" {
 		logger.Fatal("SSL configuration invalid, specify both socket.ssl_certificate and socket.ssl_private_key", zap.String("param", "socket.ssl_certificate"))
@@ -362,11 +390,11 @@ func CheckConfig(logger *zap.Logger, config Config) map[string]string {
 	}
 	if config.GetSocket().SSLCertificate != "" && config.GetSocket().SSLPrivateKey != "" {
 		logger.Warn("WARNING: enabling direct SSL termination is not recommended, use an SSL-capable proxy or load balancer for production!")
-		certPEMBlock, err := ioutil.ReadFile(config.GetSocket().SSLCertificate)
+		certPEMBlock, err := os.ReadFile(config.GetSocket().SSLCertificate)
 		if err != nil {
 			logger.Fatal("Error loading SSL certificate cert file", zap.Error(err))
 		}
-		keyPEMBlock, err := ioutil.ReadFile(config.GetSocket().SSLPrivateKey)
+		keyPEMBlock, err := os.ReadFile(config.GetSocket().SSLPrivateKey)
 		if err != nil {
 			logger.Fatal("Error loading SSL certificate key file", zap.Error(err))
 		}
@@ -381,6 +409,8 @@ func CheckConfig(logger *zap.Logger, config Config) map[string]string {
 		config.GetSocket().KeyPEMBlock = keyPEMBlock
 		config.GetSocket().TLSCert = []tls.Certificate{cert}
 	}
+
+	config.GetSatori().Validate(logger)
 
 	return configWarnings
 }
@@ -424,6 +454,8 @@ type config struct {
 	Leaderboard      *LeaderboardConfig `yaml:"leaderboard" json:"leaderboard" usage:"Leaderboard settings."`
 	Matchmaker       *MatchmakerConfig  `yaml:"matchmaker" json:"matchmaker" usage:"Matchmaker settings."`
 	IAP              *IAPConfig         `yaml:"iap" json:"iap" usage:"In-App Purchase settings."`
+	GoogleAuth       *GoogleAuthConfig  `yaml:"google_auth" json:"google_auth" usage:"Google's auth settings."`
+	Satori           *SatoriConfig      `yaml:"satori" json:"satori" usage:"Satori integration settings."`
 }
 
 // NewConfig constructs a Config struct which represents server settings, and populates it with default values.
@@ -449,6 +481,8 @@ func NewConfig(logger *zap.Logger) *config {
 		Leaderboard:      NewLeaderboardConfig(),
 		Matchmaker:       NewMatchmakerConfig(),
 		IAP:              NewIAPConfig(),
+		GoogleAuth:       NewGoogleAuthConfig(),
+		Satori:           NewSatoriConfig(),
 	}
 }
 
@@ -466,6 +500,8 @@ func (c *config) Clone() (Config, error) {
 	configLeaderboard := *(c.Leaderboard)
 	configMatchmaker := *(c.Matchmaker)
 	configIAP := *(c.IAP)
+	configSatori := *(c.Satori)
+	configGoogleAuth := *(c.GoogleAuth)
 	nc := &config{
 		Name:             c.Name,
 		Datadir:          c.Datadir,
@@ -483,6 +519,8 @@ func (c *config) Clone() (Config, error) {
 		Leaderboard:      &configLeaderboard,
 		Matchmaker:       &configMatchmaker,
 		IAP:              &configIAP,
+		Satori:           &configSatori,
+		GoogleAuth:       &configGoogleAuth,
 	}
 	nc.Socket.CertPEMBlock = make([]byte, len(c.Socket.CertPEMBlock))
 	copy(nc.Socket.CertPEMBlock, c.Socket.CertPEMBlock)
@@ -573,6 +611,14 @@ func (c *config) GetIAP() *IAPConfig {
 	return c.IAP
 }
 
+func (c *config) GetGoogleAuth() *GoogleAuthConfig {
+	return c.GoogleAuth
+}
+
+func (c *config) GetSatori() *SatoriConfig {
+	return c.Satori
+}
+
 // LoggerConfig is configuration relevant to logging levels and output.
 type LoggerConfig struct {
 	Level    string `yaml:"level" json:"level" usage:"Log level to set. Valid values are 'debug', 'info', 'warn', 'error'. Default 'info'."`
@@ -661,6 +707,8 @@ type SocketConfig struct {
 	OutgoingQueueSize    int               `yaml:"outgoing_queue_size" json:"outgoing_queue_size" usage:"The maximum number of messages waiting to be sent to the client. If this is exceeded the client is considered too slow and will disconnect. Used when processing real-time connections."`
 	SSLCertificate       string            `yaml:"ssl_certificate" json:"ssl_certificate" usage:"Path to certificate file if you want the server to use SSL directly. Must also supply ssl_private_key. NOT recommended for production use."`
 	SSLPrivateKey        string            `yaml:"ssl_private_key" json:"ssl_private_key" usage:"Path to private key file if you want the server to use SSL directly. Must also supply ssl_certificate. NOT recommended for production use."`
+	ResponseHeaders      []string          `yaml:"response_headers" json:"response_headers" usage:"Additional headers to send to clients with every response. Values here are only used if the response would not otherwise contain a value for the specified headers."`
+	Headers              map[string]string `yaml:"-" json:"-"` // Created by parsing ResponseHeaders above, not set from input args directly.
 	CertPEMBlock         []byte            `yaml:"-" json:"-"` // Created by fully reading the file contents of SSLCertificate, not set from input args directly.
 	KeyPEMBlock          []byte            `yaml:"-" json:"-"` // Created by fully reading the file contents of SSLPrivateKey, not set from input args directly.
 	TLSCert              []tls.Certificate `yaml:"-" json:"-"` // Created by processing CertPEMBlock and KeyPEMBlock, not set from input args directly.
@@ -910,6 +958,7 @@ type LeaderboardConfig struct {
 	BlacklistRankCache   []string `yaml:"blacklist_rank_cache" json:"blacklist_rank_cache" usage:"Disable rank cache for leaderboards with matching identifiers. To disable rank cache entirely, use '*', otherwise leave blank to enable rank cache."`
 	CallbackQueueSize    int      `yaml:"callback_queue_size" json:"callback_queue_size" usage:"Size of the leaderboard and tournament callback queue that sequences expiry/reset/end invocations. Default 65536."`
 	CallbackQueueWorkers int      `yaml:"callback_queue_workers" json:"callback_queue_workers" usage:"Number of workers to use for concurrent processing of leaderboard and tournament callbacks. Default 8."`
+	RankCacheWorkers     int      `yaml:"rank_cache_workers" json:"rank_cache_workers" usage:"The number of parallel workers to use while populating leaderboard rank cache from the database. Higher number of workers usually makes the process faster but at the cost of increased database load. Default 1."`
 }
 
 func NewLeaderboardConfig() *LeaderboardConfig {
@@ -917,6 +966,7 @@ func NewLeaderboardConfig() *LeaderboardConfig {
 		BlacklistRankCache:   []string{},
 		CallbackQueueSize:    65536,
 		CallbackQueueWorkers: 8,
+		RankCacheWorkers:     1,
 	}
 }
 
@@ -963,10 +1013,63 @@ type IAPGoogleConfig struct {
 	ClientEmail             string `yaml:"client_email" json:"client_email" usage:"Google Service Account client email."`
 	PrivateKey              string `yaml:"private_key" json:"private_key" usage:"Google Service Account private key."`
 	NotificationsEndpointId string `yaml:"notifications_endpoint_id" json:"notifications_endpoint_id" usage:"The callback endpoint identifier for Android subscription notifications."`
+	RefundCheckPeriodMin    int    `yaml:"refund_check_period_min" json:"refund_check_period_min" usage:"Defines the polling interval in minutes of the Google IAP refund API."`
+	PackageName             string `yaml:"package_name" json:"package_name" usage:"Google Play Store App Package Name."`
+}
+
+func (iapg *IAPGoogleConfig) Enabled() bool {
+	if iapg.PrivateKey != "" && iapg.PackageName != "" {
+		return true
+	}
+	return false
+}
+
+type SatoriConfig struct {
+	Url        string `yaml:"url" json:"url" usage:"Satori URL."`
+	ApiKeyName string `yaml:"api_key_name" json:"api_key_name" usage:"Satori Api key name."`
+	ApiKey     string `yaml:"api_key" json:"api_key" usage:"Satori Api key."`
+	SigningKey string `yaml:"signing_key" json:"signing_key" usage:"Key used to sign Satori session tokens."`
+}
+
+func NewSatoriConfig() *SatoriConfig {
+	return &SatoriConfig{}
+}
+
+func (sc *SatoriConfig) Validate(logger *zap.Logger) {
+	satoriUrl, err := url.Parse(sc.Url) // Empty string is a valid URL
+	if err != nil {
+		logger.Fatal("Satori URL is invalid", zap.String("satori_url", sc.Url), zap.Error(err))
+	}
+
+	if satoriUrl.String() != "" {
+		if sc.ApiKeyName == "" {
+			logger.Fatal("Satori configuration incomplete: api_key_name not set")
+		}
+		if sc.ApiKey == "" {
+			logger.Fatal("Satori configuration incomplete: api_key not set")
+		}
+		if sc.SigningKey == "" {
+			logger.Fatal("Satori configuration incomplete: signing_key not set")
+		}
+	} else if sc.ApiKeyName != "" || sc.ApiKey != "" || sc.SigningKey != "" {
+		logger.Fatal("Satori configuration incomplete: url not set")
+	}
 }
 
 type IAPHuaweiConfig struct {
 	PublicKey    string `yaml:"public_key" json:"public_key" usage:"Huawei IAP store Base64 encoded Public Key."`
 	ClientID     string `yaml:"client_id" json:"client_id" usage:"Huawei OAuth client secret."`
 	ClientSecret string `yaml:"client_secret" json:"client_secret" usage:"Huawei OAuth app client secret."`
+}
+
+type GoogleAuthConfig struct {
+	CredentialsJSON string         `yaml:"credentials_json" json:"credentials_json" usage:"Google's Access Credentials."`
+	OAuthConfig     *oauth2.Config `yaml:"-" json:"-"`
+}
+
+func NewGoogleAuthConfig() *GoogleAuthConfig {
+	return &GoogleAuthConfig{
+		CredentialsJSON: "",
+		OAuthConfig:     nil,
+	}
 }

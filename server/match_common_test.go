@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/atomic"
@@ -64,7 +64,7 @@ func createTestMatchRegistry(t fatalable, logger *zap.Logger) (*LocalMatchRegist
 				return nil, err
 			}
 
-			rmc, err := NewRuntimeGoMatchCore(logger, "module", matchRegistry, messageRouter, id, "node",
+			rmc, err := NewRuntimeGoMatchCore(logger, "module", matchRegistry, messageRouter, id, "node", "",
 				stopped, nil, map[string]string{}, nil, match)
 			if err != nil {
 				return nil, err
@@ -183,7 +183,7 @@ func (s *testMetrics) GaugeSessions(value float64)                              
 func (s *testMetrics) GaugePresences(value float64)                                         {}
 func (s *testMetrics) Matchmaker(tickets, activeTickets float64, processTime time.Duration) {}
 func (s *testMetrics) PresenceEvent(dequeueElapsed, processElapsed time.Duration)           {}
-func (s *testMetrics) StorageRejectCount(tags map[string]string, delta int64)               {}
+func (s *testMetrics) StorageWriteRejectCount(tags map[string]string, delta int64)          {}
 func (s *testMetrics) CustomCounter(name string, tags map[string]string, delta int64)       {}
 func (s *testMetrics) CustomGauge(name string, tags map[string]string, value float64)       {}
 func (s *testMetrics) CustomTimer(name string, tags map[string]string, value time.Duration) {}
@@ -202,6 +202,7 @@ func (s *testMessageRouter) SendToPresenceIDs(_ *zap.Logger, presences []*Presen
 }
 func (s *testMessageRouter) SendToStream(*zap.Logger, PresenceStream, *rtapi.Envelope, bool) {}
 func (s *testMessageRouter) SendDeferred(*zap.Logger, []*DeferredMessage)                    {}
+func (s *testMessageRouter) SendToAll(*zap.Logger, *rtapi.Envelope, bool)                    {}
 
 // testTracker implements the Tracker interface and does nothing
 type testTracker struct{}
@@ -312,10 +313,13 @@ func (s *testSessionRegistry) Add(session Session) {}
 
 func (s *testSessionRegistry) Remove(sessionID uuid.UUID) {}
 
-func (s *testSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID,
+func (s *testSessionRegistry) Disconnect(ctx context.Context, sessionID uuid.UUID, ban bool,
 	reason ...runtime.PresenceReason) error {
 	return nil
 }
 
 func (s *testSessionRegistry) SingleSession(ctx context.Context, tracker Tracker, userID, sessionID uuid.UUID) {
+}
+
+func (s *testSessionRegistry) Range(fn func(session Session) bool) {
 }

@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -45,6 +45,8 @@ var ErrEmptyMemberDemote = errors.New("could not demote member")
 var ErrEmptyMemberPromote = errors.New("could not promote member")
 var ErrEmptyMemberKick = errors.New("could not kick member")
 
+const BANNED_CODE = 4
+
 type groupListCursor struct {
 	Lang       string
 	EdgeCount  int32
@@ -56,12 +58,12 @@ type groupListCursor struct {
 
 func (c *groupListCursor) GetState() int {
 	if c.Open {
-		return 1
+		return 0
 	}
-	return 0
+	return 1
 }
 func (c *groupListCursor) GetUpdateTime() time.Time {
-	return time.Unix(c.UpdateTime, 0)
+	return time.Unix(0, c.UpdateTime)
 }
 
 func CreateGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, userID uuid.UUID, creatorID uuid.UUID, name, lang, desc, avatarURL, metadata string, open bool, maxCount int) (*api.Group, error) {
@@ -104,13 +106,7 @@ RETURNING id, creator_id, name, description, avatar_url, state, edge_count, lang
 
 	var group *api.Group
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return nil, err
-	}
-
-	if err = ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		rows, err := tx.QueryContext(ctx, query, params...)
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -123,7 +119,7 @@ RETURNING id, creator_id, name, description, avatar_url, state, edge_count, lang
 		}
 		// Rows closed in groupConvertRows()
 
-		groups, err := groupConvertRows(rows, 1)
+		groups, _, err := groupConvertRows(rows, 1)
 		if err != nil {
 			logger.Debug("Could not parse rows.", zap.Error(err))
 			return err
@@ -271,13 +267,7 @@ func DeleteGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, groupID uu
 		}
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err = ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		return deleteGroup(ctx, logger, tx, groupID)
 	}); err != nil {
 		logger.Error("Error deleting group.", zap.Error(err))
@@ -301,7 +291,7 @@ WHERE (id = $1) AND (disable_time = '1970-01-01 00:00:00 UTC')`
 	}
 	// Rows closed in groupConvertRows()
 
-	groups, err := groupConvertRows(rows, 1)
+	groups, _, err := groupConvertRows(rows, 1)
 	if err != nil {
 		logger.Error("Could not parse groups.", zap.Error(err))
 		return err
@@ -407,13 +397,7 @@ WHERE (id = $1) AND (disable_time = '1970-01-01 00:00:00 UTC')`
 		GroupId:    group.Id,
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err = ExecuteInTx(ctx, tx, func() error {
+	if err = ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		if _, err = groupAddUser(ctx, db, tx, uuid.Must(uuid.FromString(group.Id)), userID, state); err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == dbErrorUniqueViolation {
@@ -426,9 +410,18 @@ WHERE (id = $1) AND (disable_time = '1970-01-01 00:00:00 UTC')`
 		}
 
 		query = "UPDATE groups SET edge_count = edge_count + 1, update_time = now() WHERE id = $1::UUID AND edge_count+1 <= max_count"
-		if _, err = tx.ExecContext(ctx, query, groupID); err != nil {
+		res, err := tx.ExecContext(ctx, query, groupID)
+		if err != nil {
 			logger.Debug("Could not update group edge_count.", zap.String("group_id", groupID.String()), zap.String("user_id", userID.String()))
 			return err
+		}
+
+		if rowsAffected, err := res.RowsAffected(); err != nil {
+			logger.Debug("Could not update group edge_count.", zap.Error(err), zap.String("group_id", groupID.String()), zap.String("user_id", userID.String()))
+			return err
+		} else if rowsAffected == 0 {
+			logger.Info("Could not add users as group maximum count was reached.", zap.String("group_id", groupID.String()), zap.String("user_id", userID.String()))
+			return runtime.ErrGroupFull
 		}
 
 		query = `INSERT INTO message (id, code, sender_id, username, stream_mode, stream_subject, stream_descriptor, stream_label, content, create_time, update_time)
@@ -466,6 +459,12 @@ func LeaveGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tra
 		}
 		logger.Error("Could not retrieve state from group_edge.", zap.Error(err), zap.String("group_id", groupID.String()), zap.String("user_id", userID.String()))
 		return err
+	}
+
+	if myState.Int64 == BANNED_CODE {
+		// No-op, but not an error case.
+		logger.Debug("User attempted to leave a group they're banned from.", zap.String("group_id", groupID.String()), zap.String("user_id", userID.String()))
+		return nil // Completed successfully.
 	}
 
 	if myState.Int64 == 0 {
@@ -507,13 +506,7 @@ func LeaveGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tra
 		GroupId:    groupID.String(),
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		query = "DELETE FROM group_edge WHERE (source_id = $1::UUID AND destination_id = $2::UUID) OR (source_id = $2::UUID AND destination_id = $1::UUID)"
 		// don't need to check affectedRows as we've confirmed the existence of the relationship above
 		if _, err = tx.ExecContext(ctx, query, groupID, userID); err != nil {
@@ -624,13 +617,7 @@ func AddGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, router M
 	ts := time.Now().Unix()
 	var messages []*api.ChannelMessage
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		// If the transaction is retried ensure we wipe any notifications/messages that may have been prepared by previous attempts.
 		notifications = make(map[uuid.UUID][]*api.Notification, len(userIDs))
 		messages = make([]*api.ChannelMessage, 0, len(userIDs))
@@ -783,13 +770,7 @@ func BanGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker 
 	var messages []*api.ChannelMessage
 	kicked := make(map[uuid.UUID]struct{}, len(userIDs))
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		// If the transaction is retried ensure we wipe any messages that may have been prepared by previous attempts.
 		messages = make([]*api.ChannelMessage, 0, len(userIDs))
 		// Position to use for new banned edges.
@@ -853,7 +834,7 @@ RETURNING state`
 INSERT INTO group_edge (position, state, source_id, destination_id) VALUES ($1, $2, $3, $4)
 ON CONFLICT (source_id, state, position) DO
 UPDATE SET state = $2, update_time = now()`
-			_, err := tx.ExecContext(ctx, query, position, 4, groupID, uid)
+			_, err := tx.ExecContext(ctx, query, position, BANNED_CODE, groupID, uid)
 			if err != nil {
 				logger.Debug("Could not add banned relationship in group_edge.", zap.Error(err), zap.String("group_id", groupID.String()), zap.String("user_id", uid.String()))
 				return err
@@ -926,7 +907,7 @@ VALUES ($1, $2, $3, $4, $5, $6::UUID, $7::UUID, $8, $9, $10, $10)`
 	return nil
 }
 
-func KickGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, streamManager StreamManager, caller uuid.UUID, groupID uuid.UUID, userIDs []uuid.UUID) error {
+func KickGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker Tracker, router MessageRouter, streamManager StreamManager, caller uuid.UUID, groupID uuid.UUID, userIDs []uuid.UUID, strictError bool) error {
 	myState := 0
 	if caller != uuid.Nil {
 		var dbState sql.NullInt64
@@ -974,13 +955,7 @@ func KickGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, tracker
 	var messages []*api.ChannelMessage
 	kicked := make(map[uuid.UUID]struct{}, len(userIDs))
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		// If the transaction is retried ensure we wipe any messages that may have been prepared by previous attempts.
 		messages = make([]*api.ChannelMessage, 0, len(userIDs))
 
@@ -1031,6 +1006,9 @@ RETURNING state`
 			logger.Debug("Kick user from group query.", zap.String("query", query), zap.String("group_id", groupID.String()), zap.String("user_id", uid.String()), zap.String("caller", caller.String()), zap.Int("caller_state", myState))
 			if err := tx.QueryRowContext(ctx, query, params...).Scan(&deletedState); err != nil {
 				if err == sql.ErrNoRows {
+					if strictError {
+						return err
+					}
 					// Ignore - move to the next user ID.
 					continue
 				} else {
@@ -1152,13 +1130,7 @@ func PromoteGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, rout
 	ts := time.Now().Unix()
 	var messages []*api.ChannelMessage
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		// If the transaction is retried ensure we wipe any messages that may have been prepared by previous attempts.
 		messages = make([]*api.ChannelMessage, 0, len(userIDs))
 
@@ -1170,13 +1142,13 @@ func PromoteGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, rout
 			query := `
 UPDATE group_edge SET state = state - 1
 WHERE
-	(source_id = $1::UUID AND destination_id = $2::UUID AND state > 0 AND state > $3)
+	(source_id = $1::UUID AND destination_id = $2::UUID AND state > 0 AND state > $3 AND state <= $4)
 OR
-	(source_id = $2::UUID AND destination_id = $1::UUID AND state > 0 AND state > $3)
+	(source_id = $2::UUID AND destination_id = $1::UUID AND state > 0 AND state > $3 AND state <= $4)
 RETURNING state`
 
 			var newState sql.NullInt64
-			if err := tx.QueryRowContext(ctx, query, groupID, uid, myState).Scan(&newState); err != nil {
+			if err := tx.QueryRowContext(ctx, query, groupID, uid, myState, api.GroupUserList_GroupUser_MEMBER).Scan(&newState); err != nil {
 				if err == sql.ErrNoRows {
 					continue
 				}
@@ -1283,13 +1255,7 @@ func DemoteGroupUsers(ctx context.Context, logger *zap.Logger, db *sql.DB, route
 	ts := time.Now().Unix()
 	var messages []*api.ChannelMessage
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		logger.Error("Could not begin database transaction.", zap.Error(err))
-		return err
-	}
-
-	if err := ExecuteInTx(ctx, tx, func() error {
+	if err := ExecuteInTx(ctx, db, func(tx *sql.Tx) error {
 		// If the transaction is retried ensure we wipe any messages that may have been prepared by previous attempts.
 		messages = make([]*api.ChannelMessage, 0, len(userIDs))
 
@@ -1679,7 +1645,7 @@ AND id IN (` + strings.Join(statements, ",") + `)`
 	}
 	// Rows closed in groupConvertRows()
 
-	groups, err := groupConvertRows(rows, len(ids))
+	groups, _, err := groupConvertRows(rows, len(ids))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return make([]*api.Group, 0), nil
@@ -1731,7 +1697,7 @@ WHERE name ILIKE $2`
 	case open != nil && langTag != "" && edgeCount > -1:
 		// Filtering by open/closed, lang tag, and edge count
 		state := 0
-		if *open {
+		if !*open {
 			state = 1
 		}
 		params = append(params, state, langTag, edgeCount)
@@ -1750,7 +1716,7 @@ AND edge_count <= $4`
 	case open != nil && langTag != "":
 		// Filtering by open/closed and lang tag.
 		state := 0
-		if *open {
+		if !*open {
 			state = 1
 		}
 		params = append(params, state, langTag)
@@ -1767,7 +1733,7 @@ AND lang_tag = $3`
 	case open != nil && edgeCount > -1:
 		// Filtering by open/closed and edge count.
 		state := 0
-		if *open {
+		if !*open {
 			state = 1
 		}
 		params = append(params, state, edgeCount)
@@ -1808,6 +1774,7 @@ AND lang_tag = $2`
 			params = append(params, cursor.Lang, cursor.EdgeCount, cursor.ID)
 			query += " AND (disable_time, lang_tag, edge_count, id) > ('1970-01-01 00:00:00 UTC', $3, $4, $5)"
 		}
+		query += " ORDER BY disable_time, lang_tag, edge_count, id"
 	case edgeCount > -1:
 		// Filtering by edge count only.
 		params = append(params, edgeCount)
@@ -1824,7 +1791,7 @@ AND edge_count <= $2`
 	case open != nil:
 		// Filtering by open/closed only.
 		state := 0
-		if *open {
+		if !*open {
 			state = 1
 		}
 		params = append(params, state)
@@ -1834,9 +1801,10 @@ FROM groups
 WHERE disable_time = '1970-01-01 00:00:00 UTC'
 AND state = $2`
 		if cursor != nil {
-			params = append(params, cursor.GetState(), cursor.EdgeCount, cursor.Lang, cursor.ID)
-			query += " AND (disable_time, state, lang_tag, edge_count, id) > ('1970-01-01 00:00:00 UTC', $3, $4, $5, $6)"
+			params = append(params, cursor.GetUpdateTime(), cursor.EdgeCount, cursor.ID)
+			query += " AND (disable_time, update_time, edge_count, id) > ('1970-01-01 00:00:00 UTC', $3, $4, $5)"
 		}
+		query += " ORDER BY disable_time, update_time, edge_count, id"
 	default:
 		// No filter.
 		query = `
@@ -1862,7 +1830,7 @@ WHERE disable_time = '1970-01-01 00:00:00 UTC'`
 	}
 
 	// Rows closed in groupConvertRows()
-	groups, err := groupConvertRows(rows, limit+1)
+	groups, newCursorStr, err := groupConvertRows(rows, limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return groupList, nil
@@ -1871,25 +1839,8 @@ WHERE disable_time = '1970-01-01 00:00:00 UTC'`
 		return nil, err
 	}
 
-	groupList.Groups = groups[:int(math.Min(float64(len(groups)), float64(limit)))]
-
-	cursorBuf := new(bytes.Buffer)
-	if len(groups) > limit {
-		lastGroup := groupList.Groups[len(groupList.Groups)-1]
-		newCursor := &groupListCursor{
-			ID:         uuid.Must(uuid.FromString(lastGroup.Id)),
-			EdgeCount:  lastGroup.EdgeCount,
-			Lang:       lastGroup.LangTag,
-			Name:       lastGroup.Name,
-			Open:       lastGroup.Open.Value,
-			UpdateTime: lastGroup.UpdateTime.Seconds,
-		}
-		if err := gob.NewEncoder(cursorBuf).Encode(newCursor); err != nil {
-			logger.Error("Could not create new cursor.", zap.Error(err))
-			return nil, err
-		}
-		groupList.Cursor = base64.RawURLEncoding.EncodeToString(cursorBuf.Bytes())
-	}
+	groupList.Groups = groups
+	groupList.Cursor = newCursorStr
 
 	return groupList, nil
 }
@@ -1909,7 +1860,7 @@ type groupSqlStruct struct {
 	updateTime  pgtype.Timestamptz
 }
 
-func sqlMapper(row *groupSqlStruct) *api.Group {
+func sqlMapper(row *groupSqlStruct) (*api.Group, *time.Time) {
 	open := true
 	if row.state.Int64 == 1 {
 		open = false
@@ -1927,34 +1878,64 @@ func sqlMapper(row *groupSqlStruct) *api.Group {
 		MaxCount:    int32(row.maxCount.Int64),
 		CreateTime:  &timestamppb.Timestamp{Seconds: row.createTime.Time.Unix()},
 		UpdateTime:  &timestamppb.Timestamp{Seconds: row.updateTime.Time.Unix()},
-	}
+	}, &row.updateTime.Time
 }
 
-func convertToGroup(rows *sql.Rows) (*api.Group, error) {
+func convertToGroup(rows *sql.Rows) (*api.Group, *time.Time, error) {
 	s := groupSqlStruct{}
 	groupStruct, fields := &s, []interface{}{&s.id, &s.creatorID, &s.name, &s.description, &s.avatarURL, &s.state, &s.edgeCount, &s.lang,
 		&s.maxCount, &s.metadata, &s.createTime, &s.updateTime}
 	if err := rows.Scan(fields...); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sqlMapper(groupStruct), nil
+	group, updateTime := sqlMapper(groupStruct)
+
+	return group, updateTime, nil
 }
 
-func groupConvertRows(rows *sql.Rows, limit int) ([]*api.Group, error) {
+func groupConvertRows(rows *sql.Rows, limit int) ([]*api.Group, string, error) {
 	defer rows.Close()
-	groups := make([]*api.Group, 0, limit)
+
+	groups := make([]*api.Group, 0, limit+1)
+	updateTimes := make([]*time.Time, 0, limit+1)
+	var updateTime *time.Time
 	for rows.Next() {
-		if group, err := convertToGroup(rows); err != nil {
-			return nil, err
+		var group *api.Group
+		var err error
+		if group, updateTime, err = convertToGroup(rows); err != nil {
+			return nil, "", err
 		} else {
 			groups = append(groups, group)
+			updateTimes = append(updateTimes, updateTime)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return groups, nil
+	outGroups := groups[:int(math.Min(float64(len(groups)), float64(limit)))]
+
+	var cursor string
+	cursorBuf := new(bytes.Buffer)
+	if len(groups) > limit {
+		lastGroup := outGroups[len(outGroups)-1]
+		newCursor := &groupListCursor{
+			ID:         uuid.Must(uuid.FromString(lastGroup.Id)),
+			EdgeCount:  lastGroup.EdgeCount,
+			Lang:       lastGroup.LangTag,
+			Name:       lastGroup.Name,
+			Open:       lastGroup.Open.Value,
+			UpdateTime: updateTimes[len(outGroups)-1].UnixNano(),
+		}
+
+		if err := gob.NewEncoder(cursorBuf).Encode(newCursor); err != nil {
+			return nil, "", err
+		}
+
+		cursor = base64.RawURLEncoding.EncodeToString(cursorBuf.Bytes())
+	}
+
+	return outGroups, cursor, nil
 }
 
 func groupAddUser(ctx context.Context, db *sql.DB, tx *sql.Tx, groupID uuid.UUID, userID uuid.UUID, state int) (int64, error) {
@@ -2156,6 +2137,67 @@ WHERE group_edge.destination_id = $1`
 	return nil
 }
 
+func GetRandomGroups(ctx context.Context, logger *zap.Logger, db *sql.DB, count int) ([]*api.Group, error) {
+	if count == 0 {
+		return []*api.Group{}, nil
+	}
+
+	query := `
+SELECT id, creator_id, name, description, avatar_url, state, edge_count, lang_tag, max_count, metadata, create_time, update_time
+FROM groups
+WHERE id > $1
+LIMIT $2`
+	rows, err := db.QueryContext(ctx, query, uuid.Must(uuid.NewV4()).String(), count)
+	if err != nil {
+		logger.Error("Error retrieving random groups.", zap.Error(err))
+		return nil, err
+	}
+	groups := make([]*api.Group, 0, count)
+	for rows.Next() {
+		group, _, err := convertToGroup(rows)
+		if err != nil {
+			_ = rows.Close()
+			logger.Error("Error retrieving random groups.", zap.Error(err))
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+	_ = rows.Close()
+
+	if len(groups) < count {
+		// Need more groups.
+		rows, err = db.QueryContext(ctx, query, uuid.Nil.String(), count)
+		if err != nil {
+			logger.Error("Error retrieving random groups.", zap.Error(err))
+			return nil, err
+		}
+		for rows.Next() {
+			group, _, err := convertToGroup(rows)
+			if err != nil {
+				_ = rows.Close()
+				logger.Error("Error retrieving random groups.", zap.Error(err))
+				return nil, err
+			}
+			var found bool
+			for _, existing := range groups {
+				if existing.Id == group.Id {
+					found = true
+					break
+				}
+			}
+			if !found {
+				groups = append(groups, group)
+			}
+			if len(groups) >= count {
+				break
+			}
+		}
+		_ = rows.Close()
+	}
+
+	return groups, nil
+}
+
 func getGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, groupID uuid.UUID) (*api.Group, error) {
 	query := `SELECT id, creator_id, name, description, avatar_url, state, edge_count, lang_tag, max_count, metadata, create_time, update_time
 	FROM groups WHERE id = $1`
@@ -2171,7 +2213,10 @@ func getGroup(ctx context.Context, logger *zap.Logger, db *sql.DB, groupID uuid.
 		logger.Error("Error retrieving group.", zap.Error(err))
 		return nil, err
 	}
-	return sqlMapper(groupStruct), nil
+
+	group, _ := sqlMapper(groupStruct)
+
+	return group, nil
 }
 
 func incrementGroupEdge(ctx context.Context, logger *zap.Logger, tx *sql.Tx, uid uuid.UUID, groupID uuid.UUID) error {

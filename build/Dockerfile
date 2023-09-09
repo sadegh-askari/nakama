@@ -15,7 +15,7 @@
 # docker build "$PWD" --build-arg commit="$(git rev-parse --short HEAD)" --build-arg version=v2.1.1 -t heroiclabs/nakama:2.1.1
 # docker build "$PWD" --build-arg commit="$(git rev-parse --short HEAD)" --build-arg version="$(git rev-parse --short HEAD)" -t heroiclabs/nakama-prerelease:"$(git rev-parse --short HEAD)"
 
-FROM golang:1.19.0-buster as builder
+FROM golang:1.20.6-bullseye as builder
 
 ARG commit
 ARG version
@@ -36,7 +36,7 @@ RUN git checkout --quiet "$commit" && \
     go mod vendor && \
     go build -o /go/build-out/nakama -trimpath -mod=vendor -gcflags "-trimpath $PWD" -asmflags "-trimpath $PWD" -ldflags "-s -w -X main.version=$version -X main.commitID=$commit"
 
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 MAINTAINER Heroic Labs <support@heroiclabs.com>
 
@@ -49,7 +49,7 @@ LABEL description="Distributed server for social and realtime games and apps."
 RUN mkdir -p /nakama/data/modules && \
     apt-get update && \
     apt-get -y upgrade && \
-    apt-get install -y --no-install-recommends ca-certificates=20200601~deb10u2 tzdata curl iproute2 unzip rsync git tini schroot && \
+    apt-get install -y --no-install-recommends ca-certificates=20210119 tzdata curl iproute2 unzip rsync git tini schroot && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

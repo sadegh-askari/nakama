@@ -16,6 +16,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
@@ -24,6 +25,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
@@ -34,20 +36,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
 	"github.com/heroiclabs/nakama/v3/internal/cronexpr"
 	lua "github.com/heroiclabs/nakama/v3/internal/gopher-lua"
+	"github.com/heroiclabs/nakama/v3/internal/satori"
 	"github.com/heroiclabs/nakama/v3/social"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -64,6 +66,7 @@ type RuntimeLuaNakamaModule struct {
 	protojsonMarshaler   *protojson.MarshalOptions
 	protojsonUnmarshaler *protojson.UnmarshalOptions
 	config               Config
+	version              string
 	socialClient         *social.Client
 	leaderboardCache     LeaderboardCache
 	rankCache            LeaderboardRankCache
@@ -74,26 +77,31 @@ type RuntimeLuaNakamaModule struct {
 	matchRegistry        MatchRegistry
 	tracker              Tracker
 	metrics              Metrics
+	storageIndex         StorageIndex
 	streamManager        StreamManager
 	router               MessageRouter
 	once                 *sync.Once
 	localCache           *RuntimeLuaLocalCache
 	registerCallbackFn   func(RuntimeExecutionMode, string, *lua.LFunction)
 	announceCallbackFn   func(RuntimeExecutionMode, string)
-	client               *http.Client
+	httpClient           *http.Client
+	httpClientInsecure   *http.Client
 
 	node          string
 	matchCreateFn RuntimeMatchCreateFunction
 	eventFn       RuntimeEventCustomFunction
+
+	satori runtime.Satori
 }
 
-func NewRuntimeLuaNakamaModule(logger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, once *sync.Once, localCache *RuntimeLuaLocalCache, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, registerCallbackFn func(RuntimeExecutionMode, string, *lua.LFunction), announceCallbackFn func(RuntimeExecutionMode, string)) *RuntimeLuaNakamaModule {
+func NewRuntimeLuaNakamaModule(logger *zap.Logger, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, version string, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, once *sync.Once, localCache *RuntimeLuaLocalCache, storageIndex StorageIndex, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, registerCallbackFn func(RuntimeExecutionMode, string, *lua.LFunction), announceCallbackFn func(RuntimeExecutionMode, string)) *RuntimeLuaNakamaModule {
 	return &RuntimeLuaNakamaModule{
 		logger:               logger,
 		db:                   db,
 		protojsonMarshaler:   protojsonMarshaler,
 		protojsonUnmarshaler: protojsonUnmarshaler,
 		config:               config,
+		version:              version,
 		socialClient:         socialClient,
 		leaderboardCache:     leaderboardCache,
 		rankCache:            rankCache,
@@ -108,15 +116,17 @@ func NewRuntimeLuaNakamaModule(logger *zap.Logger, db *sql.DB, protojsonMarshale
 		router:               router,
 		once:                 once,
 		localCache:           localCache,
+		storageIndex:         storageIndex,
 		registerCallbackFn:   registerCallbackFn,
 		announceCallbackFn:   announceCallbackFn,
-		client: &http.Client{
-			Timeout: 5 * time.Second,
-		},
+		httpClient:           &http.Client{},
+		httpClientInsecure:   &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}},
 
 		node:          config.GetName(),
 		matchCreateFn: matchCreateFn,
 		eventFn:       eventFn,
+
+		satori: satori.NewSatoriClient(logger, config.GetSatori().Url, config.GetSatori().ApiKeyName, config.GetSatori().ApiKey, config.GetSatori().SigningKey),
 	}
 }
 
@@ -131,12 +141,14 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"register_tournament_end":            n.registerTournamentEnd,
 		"register_tournament_reset":          n.registerTournamentReset,
 		"register_leaderboard_reset":         n.registerLeaderboardReset,
+		"register_storage_index":             n.registerStorageIndex,
+		"register_storage_index_filter":      n.registerStorageIndexFilter,
 		"run_once":                           n.runOnce,
 		"get_context":                        n.getContext,
 		"event":                              n.event,
-		"metricsCounterAdd":                  n.metricsCounterAdd,
-		"metricsGaugeSet":                    n.metricsGaugeSet,
-		"metricsTimerRecord":                 n.metricsTimerRecord,
+		"metrics_counter_add":                n.metricsCounterAdd,
+		"metrics_gauge_set":                  n.metricsGaugeSet,
+		"metrics_timer_record":               n.metricsTimerRecord,
 		"localcache_get":                     n.localcacheGet,
 		"localcache_put":                     n.localcachePut,
 		"localcache_delete":                  n.localcacheDelete,
@@ -263,6 +275,7 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"tournaments_get_id":                 n.tournamentsGetId,
 		"tournament_records_list":            n.tournamentRecordsList,
 		"tournament_record_write":            n.tournamentRecordWrite,
+		"tournament_record_delete":           n.tournamentRecordDelete,
 		"tournament_records_haystack":        n.tournamentRecordsHaystack,
 		"groups_get_id":                      n.groupsGetId,
 		"group_create":                       n.groupCreate,
@@ -277,6 +290,7 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"group_users_list":                   n.groupUsersList,
 		"group_users_kick":                   n.groupUsersKick,
 		"groups_list":                        n.groupsList,
+		"groups_get_random":                  n.groupsGetRandom,
 		"user_groups_list":                   n.userGroupsList,
 		"friends_list":                       n.friendsList,
 		"friends_add":                        n.friendsAdd,
@@ -285,8 +299,11 @@ func (n *RuntimeLuaNakamaModule) Loader(l *lua.LState) int {
 		"file_read":                          n.fileRead,
 		"channel_message_send":               n.channelMessageSend,
 		"channel_message_update":             n.channelMessageUpdate,
+		"channel_message_remove":             n.channelMessageRemove,
 		"channel_messages_list":              n.channelMessagesList,
 		"channel_id_build":                   n.channelIdBuild,
+		"storage_index_list":                 n.storageIndexList,
+		"get_satori":                         n.getSatori,
 	}
 
 	mod := l.SetFuncs(l.CreateTable(0, len(functions)), functions)
@@ -484,6 +501,53 @@ func (n *RuntimeLuaNakamaModule) registerLeaderboardReset(l *lua.LState) int {
 	return 0
 }
 
+// @group storage
+// @summary Create a new storage index.
+// @param indexName(type=string) Name of the index to list entries from.
+// @param collection(type=string) Collection of storage engine to index objects from.
+// @param key(type=string) Key of storage objects to index. Set to empty string to index all objects of collection.
+// @param fields(type=table) A table of strings with the keys of the storage object whose values are to be indexed.
+// @param maxEntries(type=int) Maximum number of entries kept in the index.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) registerStorageIndex(l *lua.LState) int {
+	idxName := l.CheckString(1)
+	collection := l.CheckString(2)
+	key := l.CheckString(3)
+	fieldsTable := l.CheckTable(4)
+	fields := make([]string, 0, fieldsTable.Len())
+	fieldsTable.ForEach(func(k, v lua.LValue) {
+		if v.Type() != lua.LTString {
+			l.ArgError(4, "expects each field to be string")
+			return
+		}
+		fields = append(fields, v.String())
+	})
+	maxEntries := l.CheckInt(5)
+
+	if err := n.storageIndex.CreateIndex(context.Background(), idxName, collection, key, fields, maxEntries); err != nil {
+		l.RaiseError("failed to create storage index: %s", err.Error())
+	}
+
+	return 0
+}
+
+// @group storage
+// @summary List storage index entries
+// @param indexName(type=string) Name of the index to register filter function.
+// @param fn(type=function) A function reference which will be executed on each storage object to be written that is a candidate for the index.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) registerStorageIndexFilter(l *lua.LState) int {
+	fn := l.CheckFunction(1)
+
+	if n.registerCallbackFn != nil {
+		n.registerCallbackFn(RuntimeExecutionModeStorageIndexFilter, "", fn)
+	}
+	if n.announceCallbackFn != nil {
+		n.announceCallbackFn(RuntimeExecutionModeStorageIndexFilter, "")
+	}
+	return 0
+}
+
 // @group hooks
 // @summary Registers a function to be run only once.
 // @param fn(type=function) A function reference which will be executed only once.
@@ -496,7 +560,7 @@ func (n *RuntimeLuaNakamaModule) runOnce(l *lua.LState) int {
 			return
 		}
 
-		ctx := NewRuntimeLuaContext(l, n.config.GetName(), RuntimeLuaConvertMapString(l, n.config.GetRuntime().Environment), RuntimeExecutionModeRunOnce, nil, nil, 0, "", "", nil, "", "", "", "")
+		ctx := NewRuntimeLuaContext(l, n.config.GetName(), n.version, RuntimeLuaConvertMapString(l, n.config.GetRuntime().Environment), RuntimeExecutionModeRunOnce, nil, nil, 0, "", "", nil, "", "", "", "")
 
 		l.Push(LSentinel)
 		l.Push(fn)
@@ -520,7 +584,7 @@ func (n *RuntimeLuaNakamaModule) runOnce(l *lua.LState) int {
 }
 
 func (n *RuntimeLuaNakamaModule) getContext(l *lua.LState) int {
-	ctx := NewRuntimeLuaContext(l, n.config.GetName(), RuntimeLuaConvertMapString(l, n.config.GetRuntime().Environment), RuntimeExecutionModeRunOnce, nil, nil, 0, "", "", nil, "", "", "", "")
+	ctx := NewRuntimeLuaContext(l, n.config.GetName(), n.version, RuntimeLuaConvertMapString(l, n.config.GetRuntime().Environment), RuntimeExecutionModeRunOnce, nil, nil, 0, "", "", nil, "", "", "", "")
 	l.Push(ctx)
 	return 1
 }
@@ -598,7 +662,7 @@ func (n *RuntimeLuaNakamaModule) event(l *lua.LState) int {
 // @param delta(type=number) An integer value to update this metric with.
 func (n *RuntimeLuaNakamaModule) metricsCounterAdd(l *lua.LState) int {
 	name := l.CheckString(1)
-	tags, err := getStringMap(l.OptTable(2, nil))
+	tags, err := RuntimeLuaConvertLuaTableString(l.OptTable(2, nil))
 	if err != nil {
 		l.ArgError(2, err.Error())
 	}
@@ -615,7 +679,7 @@ func (n *RuntimeLuaNakamaModule) metricsCounterAdd(l *lua.LState) int {
 // @param value(type=number) A value to update this metric with.
 func (n *RuntimeLuaNakamaModule) metricsGaugeSet(l *lua.LState) int {
 	name := l.CheckString(1)
-	tags, err := getStringMap(l.OptTable(2, nil))
+	tags, err := RuntimeLuaConvertLuaTableString(l.OptTable(2, nil))
 	if err != nil {
 		l.ArgError(2, err.Error())
 	}
@@ -632,7 +696,7 @@ func (n *RuntimeLuaNakamaModule) metricsGaugeSet(l *lua.LState) int {
 // @param value(type=number) An integer value to update this metric with (in nanoseconds).
 func (n *RuntimeLuaNakamaModule) metricsTimerRecord(l *lua.LState) int {
 	name := l.CheckString(1)
-	tags, err := getStringMap(l.OptTable(2, nil))
+	tags, err := RuntimeLuaConvertLuaTableString(l.OptTable(2, nil))
 	if err != nil {
 		l.ArgError(2, err.Error())
 	}
@@ -917,37 +981,56 @@ func (n *RuntimeLuaNakamaModule) uuidStringToBytes(l *lua.LState) int {
 // @param headers(type=table, optional=true) A table of headers used with the request.
 // @param content(type=string, optional=true) The bytes to send with the request.
 // @param timeout(type=number, optional=true, default=5000) Timeout of the request in milliseconds.
+// @param insecure(type=bool, optional=true, default=false) Set to true to skip request TLS validations.
 // @return returnVal(table) Code, Headers, and Body response values for the HTTP response.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) httpRequest(l *lua.LState) int {
 	url := l.CheckString(1)
-	method := l.CheckString(2)
+	method := strings.ToUpper(l.CheckString(2))
 	headers := l.CheckTable(3)
 	body := l.OptString(4, "")
+
 	if url == "" {
 		l.ArgError(1, "expects URL string")
 		return 0
 	}
-	if method == "" {
-		l.ArgError(2, "expects method string")
+
+	switch method {
+	case http.MethodGet:
+	case http.MethodPost:
+	case http.MethodPut:
+	case http.MethodPatch:
+	case http.MethodDelete:
+	case http.MethodHead:
+	default:
+		l.ArgError(2, "expects method to be one of: 'get', 'post', 'put', 'patch', 'delete', 'head'")
 		return 0
 	}
 
 	// Set a custom timeout if one is provided, or use the default.
 	timeoutMs := l.OptInt64(5, 5000)
-	n.client.Timeout = time.Duration(timeoutMs) * time.Millisecond
+	if timeoutMs <= 0 {
+		timeoutMs = 5_000
+	}
+
+	insecure := l.OptBool(6, false)
 
 	// Prepare request body, if any.
 	var requestBody io.Reader
 	if body != "" {
 		requestBody = strings.NewReader(body)
 	}
+
+	ctx, ctxCancelFn := context.WithTimeout(l.Context(), time.Duration(timeoutMs)*time.Millisecond)
+	defer ctxCancelFn()
+
 	// Prepare the request.
-	req, err := http.NewRequest(method, url, requestBody)
+	req, err := http.NewRequestWithContext(ctx, method, url, requestBody)
 	if err != nil {
 		l.RaiseError("HTTP request error: %v", err.Error())
 		return 0
 	}
+
 	// Apply any request headers.
 	httpHeaders := RuntimeLuaConvertLuaTable(headers)
 	for k, v := range httpHeaders {
@@ -958,14 +1041,20 @@ func (n *RuntimeLuaNakamaModule) httpRequest(l *lua.LState) int {
 		}
 		req.Header.Add(k, vs)
 	}
+
 	// Execute the request.
-	resp, err := n.client.Do(req)
+	var resp *http.Response
+	if insecure {
+		resp, err = n.httpClientInsecure.Do(req)
+	} else {
+		resp, err = n.httpClient.Do(req)
+	}
 	if err != nil {
 		l.RaiseError("HTTP request error: %v", err.Error())
 		return 0
 	}
 	// Read the response body.
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
 		l.RaiseError("HTTP response body error: %v", err.Error())
@@ -1131,6 +1220,7 @@ func (n *RuntimeLuaNakamaModule) base64Encode(l *lua.LState) int {
 // @group utils
 // @summary Decode a base64 encoded string.
 // @param input(type=string) The string which will be base64 decoded.
+// @param padding(type=bool, optional=true, default=true) Pad the string if padding is missing.
 // @return output(string) Decoded string.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) base64Decode(l *lua.LState) int {
@@ -1140,9 +1230,9 @@ func (n *RuntimeLuaNakamaModule) base64Decode(l *lua.LState) int {
 		return 0
 	}
 
-	padding := l.OptBool(2, false)
+	padding := l.OptBool(2, true)
 
-	if !padding {
+	if padding {
 		// Pad string up to length multiple of 4 if needed to effectively make padding optional.
 		if maybePad := len(input) % 4; maybePad != 0 {
 			input += strings.Repeat("=", 4-maybePad)
@@ -2032,6 +2122,7 @@ func (n *RuntimeLuaNakamaModule) authenticateSteam(l *lua.LState) int {
 // @param userId(type=string) User ID to use to generate the token.
 // @param username(type=string, optional=true) The user's username. If left empty, one is generated.
 // @param expiresAt(type=number, optional=true) UTC time in seconds when the token must expire. Defaults to server configured expiry time.
+// @param vars(type=table, optional=true) Extra information that will be bundled in the session token.
 // @return token(string) The Nakama session token.
 // @return validity(number) The period for which the token remains valid.
 // @return error(error) An optional error value if an error occurred.
@@ -2580,12 +2671,37 @@ func userToLuaTable(l *lua.LState, user *api.User) (*lua.LTable, error) {
 	metadataMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(user.Metadata), &metadataMap)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert metadata to json: %s", err.Error())
+		return nil, fmt.Errorf("failed to convert user metadata to json: %s", err.Error())
 	}
 	metadataTable := RuntimeLuaConvertMap(l, metadataMap)
 	ut.RawSetString("metadata", metadataTable)
 
 	return ut, nil
+}
+
+func groupToLuaTable(l *lua.LState, group *api.Group) (*lua.LTable, error) {
+	gt := l.CreateTable(0, 12)
+	gt.RawSetString("id", lua.LString(group.Id))
+	gt.RawSetString("creator_id", lua.LString(group.CreatorId))
+	gt.RawSetString("name", lua.LString(group.Name))
+	gt.RawSetString("description", lua.LString(group.Description))
+	gt.RawSetString("avatar_url", lua.LString(group.AvatarUrl))
+	gt.RawSetString("lang_tag", lua.LString(group.LangTag))
+	gt.RawSetString("open", lua.LBool(group.Open.Value))
+	gt.RawSetString("edge_count", lua.LNumber(group.EdgeCount))
+	gt.RawSetString("max_count", lua.LNumber(group.MaxCount))
+	gt.RawSetString("create_time", lua.LNumber(group.CreateTime.Seconds))
+	gt.RawSetString("update_time", lua.LNumber(group.UpdateTime.Seconds))
+
+	metadataMap := make(map[string]interface{})
+	err := json.Unmarshal([]byte(group.Metadata), &metadataMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert group metadata to json: %s", err.Error())
+	}
+	metadataTable := RuntimeLuaConvertMap(l, metadataMap)
+	gt.RawSetString("metadata", metadataTable)
+
+	return gt, nil
 }
 
 func purchaseValidationToLuaTable(l *lua.LState, validation *api.ValidatePurchaseResponse) *lua.LTable {
@@ -2601,7 +2717,9 @@ func purchaseValidationToLuaTable(l *lua.LState, validation *api.ValidatePurchas
 }
 
 func purchaseToLuaTable(l *lua.LState, p *api.ValidatedPurchase) *lua.LTable {
-	validatedPurchaseTable := l.CreateTable(0, 9)
+	validatedPurchaseTable := l.CreateTable(0, 11)
+
+	validatedPurchaseTable.RawSetString("user_id", lua.LString(p.UserId))
 	validatedPurchaseTable.RawSetString("product_id", lua.LString(p.ProductId))
 	validatedPurchaseTable.RawSetString("transaction_id", lua.LString(p.TransactionId))
 	validatedPurchaseTable.RawSetString("store", lua.LString(p.Store.String()))
@@ -2614,6 +2732,9 @@ func purchaseToLuaTable(l *lua.LState, p *api.ValidatedPurchase) *lua.LTable {
 	if p.UpdateTime != nil {
 		// Update time is empty for non-persisted purchases.
 		validatedPurchaseTable.RawSetString("update_time", lua.LNumber(p.UpdateTime.Seconds))
+	}
+	if p.RefundTime != nil {
+		validatedPurchaseTable.RawSetString("refund_time", lua.LNumber(p.RefundTime.Seconds))
 	}
 	validatedPurchaseTable.RawSetString("environment", lua.LString(p.Environment.String()))
 	validatedPurchaseTable.RawSetString("seen_before", lua.LBool(p.SeenBefore))
@@ -2629,7 +2750,8 @@ func subscriptionValidationToLuaTable(l *lua.LState, validation *api.ValidateSub
 }
 
 func subscriptionToLuaTable(l *lua.LState, p *api.ValidatedSubscription) *lua.LTable {
-	validatedSubscriptionTable := l.CreateTable(0, 9)
+	validatedSubscriptionTable := l.CreateTable(0, 13)
+	validatedSubscriptionTable.RawSetString("user_id", lua.LString(p.UserId))
 	validatedSubscriptionTable.RawSetString("product_id", lua.LString(p.ProductId))
 	validatedSubscriptionTable.RawSetString("original_transaction_id", lua.LString(p.OriginalTransactionId))
 	validatedSubscriptionTable.RawSetString("store", lua.LString(p.Store.String()))
@@ -2642,9 +2764,14 @@ func subscriptionToLuaTable(l *lua.LState, p *api.ValidatedSubscription) *lua.LT
 		// Update time is empty for non-persisted subscriptions.
 		validatedSubscriptionTable.RawSetString("update_time", lua.LNumber(p.UpdateTime.Seconds))
 	}
+	if p.RefundTime != nil {
+		validatedSubscriptionTable.RawSetString("refund_time", lua.LNumber(p.RefundTime.Seconds))
+	}
 	validatedSubscriptionTable.RawSetString("environment", lua.LString(p.Environment.String()))
 	validatedSubscriptionTable.RawSetString("expiry_time", lua.LNumber(p.ExpiryTime.Seconds))
 	validatedSubscriptionTable.RawSetString("active", lua.LBool(p.Active))
+	validatedSubscriptionTable.RawSetString("provider_response", lua.LString(p.ProviderResponse))
+	validatedSubscriptionTable.RawSetString("provider_notification", lua.LString(p.ProviderNotification))
 
 	return validatedSubscriptionTable
 }
@@ -2782,7 +2909,7 @@ func (n *RuntimeLuaNakamaModule) usersBanId(l *lua.LState) int {
 	}
 
 	// Ban the user accounts.
-	err := BanUsers(l.Context(), n.logger, n.db, n.sessionCache, uids)
+	err := BanUsers(l.Context(), n.logger, n.db, n.config, n.sessionCache, n.sessionRegistry, n.tracker, uids)
 	if err != nil {
 		l.RaiseError(fmt.Sprintf("failed to ban users: %s", err.Error()))
 		return 0
@@ -3120,7 +3247,7 @@ func (n *RuntimeLuaNakamaModule) linkSteam(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink Apple authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param token(type=string) Apple sign in token.
+// @param token(type=string, optional=true) Apple sign in token.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkApple(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3130,11 +3257,7 @@ func (n *RuntimeLuaNakamaModule) unlinkApple(l *lua.LState) int {
 		return 0
 	}
 
-	token := l.CheckString(2)
-	if token == "" {
-		l.ArgError(2, "expects token string")
-		return 0
-	}
+	token := l.OptString(2, "")
 
 	if err := UnlinkApple(l.Context(), n.logger, n.db, n.config, n.socialClient, id, token); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3145,7 +3268,7 @@ func (n *RuntimeLuaNakamaModule) unlinkApple(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink custom authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param customId(type=string) Custom ID to be unlinked from the user.
+// @param customId(type=string, optional=true) Custom ID to be unlinked from the user.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkCustom(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3155,11 +3278,7 @@ func (n *RuntimeLuaNakamaModule) unlinkCustom(l *lua.LState) int {
 		return 0
 	}
 
-	customID := l.CheckString(2)
-	if customID == "" {
-		l.ArgError(2, "expects custom ID string")
-		return 0
-	}
+	customID := l.OptString(2, "")
 
 	if err := UnlinkCustom(l.Context(), n.logger, n.db, id, customID); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3195,7 +3314,7 @@ func (n *RuntimeLuaNakamaModule) unlinkDevice(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink email authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param email(type=string) Email to be unlinked from the user.
+// @param email(type=string, optional=true) Email to be unlinked from the user.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkEmail(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3205,11 +3324,7 @@ func (n *RuntimeLuaNakamaModule) unlinkEmail(l *lua.LState) int {
 		return 0
 	}
 
-	email := l.CheckString(2)
-	if email == "" {
-		l.ArgError(2, "expects email string")
-		return 0
-	}
+	email := l.OptString(2, "")
 
 	if err := UnlinkEmail(l.Context(), n.logger, n.db, id, email); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3220,7 +3335,7 @@ func (n *RuntimeLuaNakamaModule) unlinkEmail(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink Facebook authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param token(type=string) Facebook OAuth or Limited Login (JWT) access token.
+// @param token(type=string, optional=true) Facebook OAuth or Limited Login (JWT) access token.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkFacebook(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3230,11 +3345,7 @@ func (n *RuntimeLuaNakamaModule) unlinkFacebook(l *lua.LState) int {
 		return 0
 	}
 
-	token := l.CheckString(2)
-	if token == "" {
-		l.ArgError(2, "expects token string")
-		return 0
-	}
+	token := l.OptString(2, "")
 
 	if err := UnlinkFacebook(l.Context(), n.logger, n.db, n.socialClient, n.config.GetSocial().FacebookLimitedLogin.AppId, id, token); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3245,7 +3356,7 @@ func (n *RuntimeLuaNakamaModule) unlinkFacebook(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink Facebook Instant Game authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param playerInfo(type=string) Facebook player info.
+// @param playerInfo(type=string, optional=true) Facebook player info.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkFacebookInstantGame(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3255,11 +3366,7 @@ func (n *RuntimeLuaNakamaModule) unlinkFacebookInstantGame(l *lua.LState) int {
 		return 0
 	}
 
-	signedPlayerInfo := l.CheckString(2)
-	if signedPlayerInfo == "" {
-		l.ArgError(2, "expects signed player info string")
-		return 0
-	}
+	signedPlayerInfo := l.OptString(2, "")
 
 	if err := UnlinkFacebookInstantGame(l.Context(), n.logger, n.db, n.config, n.socialClient, id, signedPlayerInfo); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3285,33 +3392,33 @@ func (n *RuntimeLuaNakamaModule) unlinkGameCenter(l *lua.LState) int {
 		return 0
 	}
 
-	playerID := l.CheckString(2)
-	if playerID == "" {
-		l.ArgError(2, "expects player ID string")
-		return 0
+	setArgs := false
+	playerID := l.OptString(2, "")
+	if playerID != "" {
+		setArgs = true
 	}
-	bundleID := l.CheckString(3)
-	if bundleID == "" {
+	bundleID := l.OptString(3, "")
+	if bundleID == "" && setArgs {
 		l.ArgError(3, "expects bundle ID string")
 		return 0
 	}
-	ts := l.CheckInt64(4)
-	if ts == 0 {
+	ts := l.OptInt64(4, 0)
+	if ts == 0 && setArgs {
 		l.ArgError(4, "expects timestamp value")
 		return 0
 	}
-	salt := l.CheckString(5)
-	if salt == "" {
+	salt := l.OptString(5, "")
+	if salt == "" && setArgs {
 		l.ArgError(5, "expects salt string")
 		return 0
 	}
-	signature := l.CheckString(6)
-	if signature == "" {
+	signature := l.OptString(6, "")
+	if signature == "" && setArgs {
 		l.ArgError(6, "expects signature string")
 		return 0
 	}
-	publicKeyURL := l.CheckString(7)
-	if publicKeyURL == "" {
+	publicKeyURL := l.OptString(7, "")
+	if publicKeyURL == "" && setArgs {
 		l.ArgError(7, "expects public key URL string")
 		return 0
 	}
@@ -3325,7 +3432,7 @@ func (n *RuntimeLuaNakamaModule) unlinkGameCenter(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink Google authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param token(type=string) Google OAuth access token.
+// @param token(type=string, optional=true) Google OAuth access token.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkGoogle(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3335,11 +3442,7 @@ func (n *RuntimeLuaNakamaModule) unlinkGoogle(l *lua.LState) int {
 		return 0
 	}
 
-	token := l.CheckString(2)
-	if token == "" {
-		l.ArgError(2, "expects token string")
-		return 0
-	}
+	token := l.OptString(2, "")
 
 	if err := UnlinkGoogle(l.Context(), n.logger, n.db, n.socialClient, id, token); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -3350,7 +3453,7 @@ func (n *RuntimeLuaNakamaModule) unlinkGoogle(l *lua.LState) int {
 // @group authenticate
 // @summary Unlink Steam authentication from a user ID.
 // @param userId(type=string) The user ID to be unlinked.
-// @param token(type=string) Steam access token.
+// @param token(type=string, optional=true) Steam access token.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) unlinkSteam(l *lua.LState) int {
 	userID := l.CheckString(1)
@@ -3360,11 +3463,7 @@ func (n *RuntimeLuaNakamaModule) unlinkSteam(l *lua.LState) int {
 		return 0
 	}
 
-	token := l.CheckString(2)
-	if token == "" {
-		l.ArgError(2, "expects token string")
-		return 0
-	}
+	token := l.OptString(2, "")
 
 	if err := UnlinkSteam(l.Context(), n.logger, n.db, n.config, n.socialClient, id, token); err != nil {
 		l.RaiseError("error unlinking: %v", err.Error())
@@ -4510,7 +4609,7 @@ func (n *RuntimeLuaNakamaModule) sessionDisconnect(l *lua.LState) int {
 		reason = append(reason, runtime.PresenceReason(reasonInt))
 	}
 
-	if err := n.sessionRegistry.Disconnect(l.Context(), sessionID, reason...); err != nil {
+	if err := n.sessionRegistry.Disconnect(l.Context(), sessionID, false, reason...); err != nil {
 		l.RaiseError(fmt.Sprintf("failed to disconnect: %s", err.Error()))
 	}
 	return 0
@@ -5449,7 +5548,13 @@ func (n *RuntimeLuaNakamaModule) walletLedgerList(l *lua.LState) int {
 func (n *RuntimeLuaNakamaModule) storageList(l *lua.LState) int {
 	userIDString := l.OptString(1, "")
 	collection := l.OptString(2, "")
+
 	limit := l.CheckInt(3)
+	if limit < 0 {
+		l.ArgError(3, "limit must not be negative")
+		return 0
+	}
+
 	cursor := l.OptString(4, "")
 
 	var userID *uuid.UUID
@@ -5509,7 +5614,7 @@ func (n *RuntimeLuaNakamaModule) storageList(l *lua.LState) int {
 // @group storage
 // @summary Fetch one or more records by their bucket/collection/keyname and optional user.
 // @param objectIds(type=table) A table of object identifiers to be fetched.
-// @return objects(table) A list of matches matching the parameters criteria.
+// @return objects(table) A list of storage objects matching the parameters criteria.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) storageRead(l *lua.LState) int {
 	keysTable := l.CheckTable(1)
@@ -5665,6 +5770,33 @@ func (n *RuntimeLuaNakamaModule) storageWrite(l *lua.LState) int {
 		return 1
 	}
 
+	ops, err := tableToStorageWrites(l, dataTable)
+	if err != nil {
+		return 0
+	}
+
+	acks, _, err := StorageWriteObjects(l.Context(), n.logger, n.db, n.metrics, n.storageIndex, true, ops)
+	if err != nil {
+		l.RaiseError(fmt.Sprintf("failed to write storage objects: %s", err.Error()))
+		return 0
+	}
+
+	lv := l.CreateTable(len(acks.Acks), 0)
+	for i, k := range acks.Acks {
+		kt := l.CreateTable(0, 4)
+		kt.RawSetString("key", lua.LString(k.Key))
+		kt.RawSetString("collection", lua.LString(k.Collection))
+		kt.RawSetString("user_id", lua.LString(k.UserId))
+		kt.RawSetString("version", lua.LString(k.Version))
+
+		lv.RawSetInt(i+1, kt)
+	}
+	l.Push(lv)
+	return 1
+}
+
+func tableToStorageWrites(l *lua.LState, dataTable *lua.LTable) (StorageOpWrites, error) {
+	size := dataTable.Len()
 	ops := make(StorageOpWrites, 0, size)
 	conversionError := false
 	dataTable.ForEach(func(k, v lua.LValue) {
@@ -5798,28 +5930,38 @@ func (n *RuntimeLuaNakamaModule) storageWrite(l *lua.LState) int {
 			Object:  d,
 		})
 	})
-	if conversionError {
-		return 0
+
+	return ops, nil
+}
+
+func storageOpWritesToTable(l *lua.LState, ops StorageOpWrites) (*lua.LTable, error) {
+	lv := l.CreateTable(len(ops), 0)
+	for i, v := range ops {
+		vt := l.CreateTable(0, 7)
+		vt.RawSetString("key", lua.LString(v.Object.Key))
+		vt.RawSetString("collection", lua.LString(v.Object.Collection))
+		if v.OwnerID != "" {
+			vt.RawSetString("user_id", lua.LString(v.OwnerID))
+		} else {
+			vt.RawSetString("user_id", lua.LNil)
+		}
+		vt.RawSetString("version", lua.LString(v.Object.Version))
+		vt.RawSetString("permission_read", lua.LNumber(v.Object.PermissionRead.GetValue()))
+		vt.RawSetString("permission_write", lua.LNumber(v.Object.PermissionWrite.GetValue()))
+
+		valueMap := make(map[string]interface{})
+		err := json.Unmarshal([]byte(v.Object.Value), &valueMap)
+		if err != nil {
+			l.RaiseError(fmt.Sprintf("failed to convert value to json: %s", err.Error()))
+			return nil, err
+		}
+		valueTable := RuntimeLuaConvertMap(l, valueMap)
+		vt.RawSetString("value", valueTable)
+
+		lv.RawSetInt(i+1, vt)
 	}
 
-	acks, _, err := StorageWriteObjects(l.Context(), n.logger, n.db, n.metrics, true, ops)
-	if err != nil {
-		l.RaiseError(fmt.Sprintf("failed to write storage objects: %s", err.Error()))
-		return 0
-	}
-
-	lv := l.CreateTable(len(acks.Acks), 0)
-	for i, k := range acks.Acks {
-		kt := l.CreateTable(0, 4)
-		kt.RawSetString("key", lua.LString(k.Key))
-		kt.RawSetString("collection", lua.LString(k.Collection))
-		kt.RawSetString("user_id", lua.LString(k.UserId))
-		kt.RawSetString("version", lua.LString(k.Version))
-
-		lv.RawSetInt(i+1, kt)
-	}
-	l.Push(lv)
-	return 1
+	return lv, nil
 }
 
 // @group storage
@@ -5934,7 +6076,7 @@ func (n *RuntimeLuaNakamaModule) storageDelete(l *lua.LState) int {
 		return 0
 	}
 
-	if _, err := StorageDeleteObjects(l.Context(), n.logger, n.db, true, ops); err != nil {
+	if _, err := StorageDeleteObjects(l.Context(), n.logger, n.db, n.storageIndex, true, ops); err != nil {
 		l.RaiseError(fmt.Sprintf("failed to remove storage: %s", err.Error()))
 	}
 
@@ -6374,9 +6516,9 @@ func (n *RuntimeLuaNakamaModule) leaderboardCreate(l *lua.LState) int {
 	sortOrder := l.OptString(3, "desc")
 	var sortOrderNumber int
 	switch sortOrder {
-	case "asc":
+	case "asc", "ascending":
 		sortOrderNumber = LeaderboardSortOrderAscending
-	case "desc":
+	case "desc", "descending":
 		sortOrderNumber = LeaderboardSortOrderDescending
 	default:
 		l.ArgError(3, "expects sort order to be 'asc' or 'desc'")
@@ -6390,9 +6532,9 @@ func (n *RuntimeLuaNakamaModule) leaderboardCreate(l *lua.LState) int {
 		operatorNumber = LeaderboardOperatorBest
 	case "set":
 		operatorNumber = LeaderboardOperatorSet
-	case "incr":
+	case "incr", "increment":
 		operatorNumber = LeaderboardOperatorIncrement
-	case "decr":
+	case "decr", "decrement":
 		operatorNumber = LeaderboardOperatorDecrement
 	default:
 		l.ArgError(4, "expects operator to be 'best', 'set', 'decr' or 'incr'")
@@ -6419,11 +6561,16 @@ func (n *RuntimeLuaNakamaModule) leaderboardCreate(l *lua.LState) int {
 		metadataStr = string(metadataBytes)
 	}
 
-	if _, err := n.leaderboardCache.Create(l.Context(), id, authoritative, sortOrderNumber, operatorNumber, resetSchedule, metadataStr); err != nil {
+	_, created, err := n.leaderboardCache.Create(l.Context(), id, authoritative, sortOrderNumber, operatorNumber, resetSchedule, metadataStr)
+	if err != nil {
 		l.RaiseError("error creating leaderboard: %v", err.Error())
 	}
 
-	n.leaderboardScheduler.Update()
+	if created {
+		// Only need to update the scheduler for newly created leaderboards.
+		n.leaderboardScheduler.Update()
+	}
+
 	return 0
 }
 
@@ -6438,60 +6585,43 @@ func (n *RuntimeLuaNakamaModule) leaderboardDelete(l *lua.LState) int {
 		return 0
 	}
 
-	if err := n.leaderboardCache.Delete(l.Context(), id); err != nil {
+	_, err := n.leaderboardCache.Delete(l.Context(), n.rankCache, n.leaderboardScheduler, id)
+	if err != nil {
 		l.RaiseError("error deleting leaderboard: %v", err.Error())
 	}
 
-	n.leaderboardScheduler.Update()
 	return 0
 }
 
 // @group leaderboards
 // @summary Find leaderboards which have been created on the server. Leaderboards can be filtered with categories.
-// @param categoryStart(type=number) Filter leaderboards with categories greater or equal than this value.
-// @param categoryEnd(type=number) Filter leaderboards with categories equal or less than this value.
 // @param limit(type=number, optional=true, default=10) Return only the required number of leaderboards denoted by this limit value.
 // @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return leaderboardList(table) A list of leaderboard results and possibly a cursor. If cursor is empty/nil there are no further results.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) leaderboardList(l *lua.LState) int {
-	categoryStart := l.OptInt(1, 0)
-	if categoryStart < 0 || categoryStart >= 128 {
-		l.ArgError(1, "categoryStart must be 0-127")
-		return 0
-	}
-	categoryEnd := l.OptInt(2, 0)
-	if categoryEnd < 0 || categoryEnd >= 128 {
-		l.ArgError(2, "categoryEnd must be 0-127")
-		return 0
-	}
-	if categoryStart > categoryEnd {
-		l.ArgError(2, "categoryEnd must be >= categoryStart")
-		return 0
-	}
-
-	limit := l.OptInt(3, 10)
+	limit := l.OptInt(1, 10)
 	if limit < 1 || limit > 100 {
-		l.ArgError(3, "limit must be 1-100")
+		l.ArgError(1, "limit must be 1-100")
 		return 0
 	}
 
 	var cursor *LeaderboardListCursor
-	cursorStr := l.OptString(4, "")
+	cursorStr := l.OptString(2, "")
 	if cursorStr != "" {
 		cb, err := base64.StdEncoding.DecodeString(cursorStr)
 		if err != nil {
-			l.ArgError(4, "expects cursor to be valid when provided")
+			l.ArgError(2, "expects cursor to be valid when provided")
 			return 0
 		}
 		cursor = &LeaderboardListCursor{}
 		if err := gob.NewDecoder(bytes.NewReader(cb)).Decode(cursor); err != nil {
-			l.ArgError(4, "expects cursor to be valid when provided")
+			l.ArgError(2, "expects cursor to be valid when provided")
 			return 0
 		}
 	}
 
-	list, err := LeaderboardList(n.logger, n.leaderboardCache, categoryStart, categoryEnd, limit, cursor)
+	list, err := LeaderboardList(n.logger, n.leaderboardCache, limit, cursor)
 	if err != nil {
 		l.RaiseError("error listing leaderboards: %v", err.Error())
 		return 0
@@ -6522,6 +6652,7 @@ func (n *RuntimeLuaNakamaModule) leaderboardList(l *lua.LState) int {
 // @param owners(type=table) List of owners to filter to.
 // @param limit(type=number, optional=true) The maximum number of records to return (Max 10,000).
 // @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
+// @param overrideExpiry(type=int, optional=true) Records with expiry in the past are not returned unless within this defined limit. Must be equal or greater than 0.
 // @return records(table) A page of leaderboard records.
 // @return ownerRecords(table) A list of owner leaderboard records (empty if the owners input parameter is not set).
 // @return nextCursor(string) An optional next page cursor that can be used to retrieve the next page of records (if any). Will be set to "" or nil when fetching last available page.
@@ -6587,7 +6718,7 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordsList(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, false)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, records.RankCount, false)
 }
 
 // @group leaderboards
@@ -6647,9 +6778,9 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordWrite(l *lua.LState) int {
 			overrideOperator = api.Operator_BEST
 		case "set":
 			overrideOperator = api.Operator_SET
-		case "incr":
+		case "incr", "increment":
 			overrideOperator = api.Operator_INCREMENT
-		case "decr":
+		case "decr", "decrement":
 			overrideOperator = api.Operator_DECREMENT
 		default:
 			l.ArgError(7, ErrInvalidOperator.Error())
@@ -6717,7 +6848,7 @@ func (n *RuntimeLuaNakamaModule) leaderboardRecordsHaystack(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, true)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, records.RankCount, true)
 }
 
 // @group leaderboards
@@ -6903,7 +7034,12 @@ func (n *RuntimeLuaNakamaModule) purchaseValidateGoogle(l *lua.LState) int {
 
 	persist := l.OptBool(3, true)
 
-	validation, err := ValidatePurchaseGoogle(l.Context(), n.logger, n.db, userID, &IAPGoogleConfig{clientEmail, privateKey, ""}, receipt, persist)
+	configOverride := &IAPGoogleConfig{
+		ClientEmail: clientEmail,
+		PrivateKey:  privateKey,
+	}
+
+	validation, err := ValidatePurchaseGoogle(l.Context(), n.logger, n.db, userID, configOverride, receipt, persist)
 
 	if err != nil {
 		l.RaiseError("error validating Google receipt: %v", err.Error())
@@ -6968,7 +7104,6 @@ func (n *RuntimeLuaNakamaModule) purchaseValidateHuawei(l *lua.LState) int {
 // @group purchases
 // @summary Look up a purchase receipt by transaction ID.
 // @param transactionId(type=string) Transaction ID of the purchase to look up.
-// @return owner(string) The owner of the purchase.
 // @return purchase(table) A validated purchase and its owner.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) purchaseGetByTransactionId(l *lua.LState) int {
@@ -6978,15 +7113,14 @@ func (n *RuntimeLuaNakamaModule) purchaseGetByTransactionId(l *lua.LState) int {
 		return 0
 	}
 
-	userID, purchase, err := GetPurchaseByTransactionID(l.Context(), n.logger, n.db, id)
+	purchase, err := GetPurchaseByTransactionId(l.Context(), n.db, id)
 	if err != nil {
 		l.RaiseError("error retrieving purchase: %v", err.Error())
 		return 0
 	}
 
-	l.Push(lua.LString(userID))
 	l.Push(purchaseToLuaTable(l, purchase))
-	return 2
+	return 1
 }
 
 // @group purchases
@@ -7085,7 +7219,7 @@ func (n *RuntimeLuaNakamaModule) subscriptionValidateApple(l *lua.LState) int {
 	return 1
 }
 
-// @group subscription
+// @group subscriptions
 // @summary Validates and stores a subscription receipt from the Google Play Store.
 // @param userId(type=string) The user ID of the owner of the receipt.
 // @param receipt(type=string) JSON encoded Google receipt.
@@ -7122,7 +7256,12 @@ func (n *RuntimeLuaNakamaModule) subscriptionValidateGoogle(l *lua.LState) int {
 
 	persist := l.OptBool(3, true)
 
-	validation, err := ValidateSubscriptionGoogle(l.Context(), n.logger, n.db, userID, &IAPGoogleConfig{clientEmail, privateKey, ""}, receipt, persist)
+	configOverride := &IAPGoogleConfig{
+		ClientEmail: clientEmail,
+		PrivateKey:  privateKey,
+	}
+
+	validation, err := ValidateSubscriptionGoogle(l.Context(), n.logger, n.db, userID, configOverride, receipt, persist)
 
 	if err != nil {
 		l.RaiseError("error validating Google receipt: %v", err.Error())
@@ -7137,7 +7276,6 @@ func (n *RuntimeLuaNakamaModule) subscriptionValidateGoogle(l *lua.LState) int {
 // @summary Look up a subscription by product ID.
 // @param userId(type=string) The user ID of the subscription owner.
 // @param productId(type=string) Transaction ID of the purchase to look up.
-// @return owner(string) The owner of the purchase.
 // @return purchase(table) A validated purchase and its owner.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) subscriptionGetByProductId(l *lua.LState) int {
@@ -7158,15 +7296,14 @@ func (n *RuntimeLuaNakamaModule) subscriptionGetByProductId(l *lua.LState) int {
 		return 0
 	}
 
-	uid, subscription, err := GetSubscriptionByProductId(l.Context(), n.logger, n.db, userID.String(), productID)
+	subscription, err := GetSubscriptionByProductId(l.Context(), n.logger, n.db, userID.String(), productID)
 	if err != nil {
 		l.RaiseError("error retrieving subscription: %v", err.Error())
 		return 0
 	}
 
-	l.Push(lua.LString(uid))
 	l.Push(subscriptionToLuaTable(l, subscription))
-	return 2
+	return 1
 }
 
 // @group subscriptions
@@ -7236,7 +7373,7 @@ func (n *RuntimeLuaNakamaModule) subscriptionsList(l *lua.LState) int {
 // @param endTime(type=number, optional=true, default=never) The end time of the tournament. When the end time is elapsed, the tournament will not reset and will cease to exist. Must be greater than startTime if set.
 // @param duration(type=number) The active duration for a tournament. This is the duration when clients are able to submit new records. The duration starts from either the reset period or tournament start time whichever is sooner. A game client can query the tournament for results between end of duration and next reset period.
 // @param maxSize(type=number, optional=true) Maximum size of participants in a tournament.
-// @param maxNumScore(type=number, optional=true) Maximum submission attempts for a tournament record.
+// @param maxNumScore(type=number, optional=true, default=1000000) Maximum submission attempts for a tournament record.
 // @param joinRequired(type=bool, optional=true, default=false) Whether the tournament needs to be joined before a record write is allowed.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
@@ -7251,9 +7388,9 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 	sortOrder := l.OptString(3, "desc")
 	var sortOrderNumber int
 	switch sortOrder {
-	case "asc":
+	case "asc", "ascending":
 		sortOrderNumber = LeaderboardSortOrderAscending
-	case "desc":
+	case "desc", "descending":
 		sortOrderNumber = LeaderboardSortOrderDescending
 	default:
 		l.ArgError(3, "expects sort order to be 'asc' or 'desc'")
@@ -7267,9 +7404,9 @@ func (n *RuntimeLuaNakamaModule) tournamentCreate(l *lua.LState) int {
 		operatorNumber = LeaderboardOperatorBest
 	case "set":
 		operatorNumber = LeaderboardOperatorSet
-	case "incr":
+	case "incr", "increment":
 		operatorNumber = LeaderboardOperatorIncrement
-	case "decr":
+	case "decr", "decrement":
 		operatorNumber = LeaderboardOperatorDecrement
 	default:
 		l.ArgError(4, "expects sort order to be 'best', 'set', 'decr' or 'incr'")
@@ -7405,7 +7542,9 @@ func (n *RuntimeLuaNakamaModule) tournamentJoin(l *lua.LState) int {
 	if userID == "" {
 		l.ArgError(2, "expects a user ID string")
 		return 0
-	} else if _, err := uuid.FromString(userID); err != nil {
+	}
+	uid, err := uuid.FromString(userID)
+	if err != nil {
 		l.ArgError(2, "expects user ID to be a valid identifier")
 		return 0
 	}
@@ -7416,7 +7555,7 @@ func (n *RuntimeLuaNakamaModule) tournamentJoin(l *lua.LState) int {
 		return 0
 	}
 
-	if err := TournamentJoin(l.Context(), n.logger, n.db, n.leaderboardCache, userID, username, id); err != nil {
+	if err := TournamentJoin(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, uid, username, id); err != nil {
 		l.RaiseError("error joining tournament: %v", err.Error())
 	}
 	return 0
@@ -7597,10 +7736,10 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordsList(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, false)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, records.RankCount, false)
 }
 
-func leaderboardRecordsToLua(l *lua.LState, records, ownerRecords []*api.LeaderboardRecord, prevCursor, nextCursor string, skipOwnerRecords bool) int {
+func leaderboardRecordsToLua(l *lua.LState, records, ownerRecords []*api.LeaderboardRecord, prevCursor, nextCursor string, rankCount int64, skipOwnerRecords bool) int {
 	recordsTable := l.CreateTable(len(records), 0)
 	for i, record := range records {
 		recordTable, err := recordToLuaTable(l, record)
@@ -7640,10 +7779,12 @@ func leaderboardRecordsToLua(l *lua.LState, records, ownerRecords []*api.Leaderb
 		l.Push(lua.LNil)
 	}
 
+	l.Push(lua.LNumber(rankCount))
+
 	if skipOwnerRecords {
-		return 3
+		return 4
 	}
-	return 4
+	return 5
 }
 
 func recordToLuaTable(l *lua.LState, record *api.LeaderboardRecord) (*lua.LTable, error) {
@@ -7706,15 +7847,30 @@ func (n *RuntimeLuaNakamaModule) tournamentList(l *lua.LState) int {
 		l.ArgError(2, "categoryEnd must be >= categoryStart")
 		return 0
 	}
-	startTime := l.OptInt(3, 0)
-	if startTime < 0 {
-		l.ArgError(3, "startTime must be >= 0")
-		return 0
+
+	startTime := -1
+	if v := l.Get(3); v.Type() != lua.LTNil {
+		if v.Type() != lua.LTNumber {
+			l.ArgError(3, "startTime must be >= 0")
+			return 0
+		}
+		startTime = int(lua.LVAsNumber(v))
+		if startTime < 0 {
+			l.ArgError(3, "startTime must be >= 0")
+			return 0
+		}
 	}
-	endTime := l.OptInt(4, 0)
-	if endTime < 0 {
-		l.ArgError(4, "endTime must be >= 0")
-		return 0
+	endTime := -1
+	if v := l.Get(4); v.Type() != lua.LTNil {
+		if v.Type() != lua.LTNumber {
+			l.ArgError(4, "endTime must be >= 0")
+			return 0
+		}
+		endTime = int(lua.LVAsNumber(v))
+		if endTime < 0 {
+			l.ArgError(4, "endTime must be >= 0")
+			return 0
+		}
 	}
 	if startTime > endTime {
 		l.ArgError(4, "endTime must be >= startTime")
@@ -7834,6 +7990,30 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordWrite(l *lua.LState) int {
 }
 
 // @group tournaments
+// @summary Remove an owner's record from a tournament, if one exists.
+// @param id(type=string) The unique identifier for the tournament to delete from.
+// @param owner(type=string) The owner of the score to delete.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) tournamentRecordDelete(l *lua.LState) int {
+	id := l.CheckString(1)
+	if id == "" {
+		l.ArgError(1, "expects a tournament ID string")
+		return 0
+	}
+
+	ownerID := l.CheckString(2)
+	if _, err := uuid.FromString(ownerID); err != nil {
+		l.ArgError(2, "expects owner ID to be a valid identifier")
+		return 0
+	}
+
+	if err := TournamentRecordDelete(l.Context(), n.logger, n.db, n.leaderboardCache, n.rankCache, uuid.Nil, id, ownerID); err != nil {
+		l.RaiseError("error deleting tournament record: %v", err.Error())
+	}
+	return 0
+}
+
+// @group tournaments
 // @summary Fetch the list of tournament records around the owner.
 // @param id(type=string) The ID of the tournament to list records for.
 // @param ownerId(type=string) The owner ID around which to show records.
@@ -7877,7 +8057,7 @@ func (n *RuntimeLuaNakamaModule) tournamentRecordsHaystack(l *lua.LState) int {
 		return 0
 	}
 
-	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, true)
+	return leaderboardRecordsToLua(l, records.Records, records.OwnerRecords, records.PrevCursor, records.NextCursor, records.RankCount, true)
 }
 
 // @group groups
@@ -8528,7 +8708,7 @@ func (n *RuntimeLuaNakamaModule) groupUsersKick(l *lua.LState) int {
 		}
 	}
 
-	if err := KickGroupUsers(l.Context(), n.logger, n.db, n.tracker, n.router, n.streamManager, callerID, groupID, userIDs); err != nil {
+	if err := KickGroupUsers(l.Context(), n.logger, n.db, n.tracker, n.router, n.streamManager, callerID, groupID, userIDs, false); err != nil {
 		l.RaiseError("error while trying to kick users from a group: %v", err.Error())
 	}
 	return 0
@@ -8573,27 +8753,11 @@ func (n *RuntimeLuaNakamaModule) groupsList(l *lua.LState) int {
 
 	groupUsers := l.CreateTable(len(groups.Groups), 0)
 	for i, group := range groups.Groups {
-		gt := l.CreateTable(0, 12)
-		gt.RawSetString("id", lua.LString(group.Id))
-		gt.RawSetString("creator_id", lua.LString(group.CreatorId))
-		gt.RawSetString("name", lua.LString(group.Name))
-		gt.RawSetString("description", lua.LString(group.Description))
-		gt.RawSetString("avatar_url", lua.LString(group.AvatarUrl))
-		gt.RawSetString("lang_tag", lua.LString(group.LangTag))
-		gt.RawSetString("open", lua.LBool(group.Open.Value))
-		gt.RawSetString("edge_count", lua.LNumber(group.EdgeCount))
-		gt.RawSetString("max_count", lua.LNumber(group.MaxCount))
-		gt.RawSetString("create_time", lua.LNumber(group.CreateTime.Seconds))
-		gt.RawSetString("update_time", lua.LNumber(group.UpdateTime.Seconds))
-
-		metadataMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(group.Metadata), &metadataMap)
+		gt, err := groupToLuaTable(l, group)
 		if err != nil {
-			l.RaiseError(fmt.Sprintf("failed to convert metadata to json: %s", err.Error()))
+			l.RaiseError(err.Error())
 			return 0
 		}
-		metadataTable := RuntimeLuaConvertMap(l, metadataMap)
-		gt.RawSetString("metadata", metadataTable)
 
 		groupUsers.RawSetInt(i+1, gt)
 	}
@@ -8608,8 +8772,45 @@ func (n *RuntimeLuaNakamaModule) groupsList(l *lua.LState) int {
 }
 
 // @group groups
+// @summary Fetch one or more groups randomly.
+// @param count(type=int) The number of groups to fetch.
+// @return users(table) A list of group record objects.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) groupsGetRandom(l *lua.LState) int {
+	count := l.OptInt(1, 0)
+
+	if count < 0 || count > 1000 {
+		l.ArgError(1, "count must be 0-1000")
+		return 0
+	}
+
+	groups, err := GetRandomGroups(l.Context(), n.logger, n.db, count)
+	if err != nil {
+		l.RaiseError(fmt.Sprintf("failed to get groups: %s", err.Error()))
+		return 0
+	}
+
+	// Convert and push the values.
+	groupsTable := l.CreateTable(len(groups), 0)
+	for i, group := range groups {
+		userTable, err := groupToLuaTable(l, group)
+		if err != nil {
+			l.RaiseError(err.Error())
+			return 0
+		}
+		groupsTable.RawSetInt(i+1, userTable)
+	}
+
+	l.Push(groupsTable)
+	return 1
+}
+
+// @group groups
 // @summary List all members, admins and superadmins which belong to a group. This also list incoming join requests.
 // @param groupId(type=string) The ID of the group to list members for.
+// @param limit(type=int, optional=true, default=100) The maximum number of entries in the listing.
+// @param state(type=int, optional=true, default=null) The state of the user within the group. If unspecified this returns users in all states.
+// @param cursor(type=string, optional=true, default="") Pagination cursor from previous result. Don't set to start fetching from the beginning.
 // @return groupUsers(table) The user information for members, admins and superadmins for the group. Also users who sent a join request.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) groupUsersList(l *lua.LState) int {
@@ -8874,7 +9075,7 @@ func (n *RuntimeLuaNakamaModule) accountDeleteId(l *lua.LState) int {
 
 	recorded := l.OptBool(2, false)
 
-	if err := DeleteAccount(l.Context(), n.logger, n.db, userID, recorded); err != nil {
+	if err := DeleteAccount(l.Context(), n.logger, n.db, n.config, n.leaderboardCache, n.rankCache, n.sessionRegistry, n.sessionCache, n.tracker, userID, recorded); err != nil {
 		l.RaiseError("error while trying to delete account: %v", err.Error())
 	}
 
@@ -9298,7 +9499,7 @@ func (n *RuntimeLuaNakamaModule) fileRead(l *lua.LState) int {
 	}
 	defer f.Close()
 
-	fileContent, err := ioutil.ReadAll(f)
+	fileContent, err := io.ReadAll(f)
 	if err != nil {
 		l.RaiseError(fmt.Sprintf("failed to read file: %s", err.Error()))
 		return 0
@@ -9315,7 +9516,7 @@ func (n *RuntimeLuaNakamaModule) fileRead(l *lua.LState) int {
 // @param senderId(type=string, optional=true) The UUID for the sender of this message. If left empty, it will be assumed that it is a system message.
 // @param senderUsername(type=string, optional=true) The username of the user to send this message as. If left empty, it will be assumed that it is a system message.
 // @param persist(type=bool, optional=true, default=true) Whether to record this message in the channel history.
-// @return ack(table) Message sent ack.
+// @return ack(table) Message sent ack containing the following variables: 'channelId', 'messageId', 'code', 'username', 'createTime', 'updateTime', and 'persistent'.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) channelMessageSend(l *lua.LState) int {
 	channelId := l.CheckString(1)
@@ -9327,6 +9528,10 @@ func (n *RuntimeLuaNakamaModule) channelMessageSend(l *lua.LState) int {
 		contentBytes, err := json.Marshal(contentMap)
 		if err != nil {
 			l.RaiseError("error encoding metadata: %v", err.Error())
+			return 0
+		}
+		if len(contentBytes) == 0 || contentBytes[0] != byteBracket {
+			l.ArgError(2, "expects message content to be a valid JSON object")
 			return 0
 		}
 		contentStr = string(contentBytes)
@@ -9380,12 +9585,16 @@ func (n *RuntimeLuaNakamaModule) channelMessageSend(l *lua.LState) int {
 // @param senderId(type=string, optional=true) The UUID for the sender of this message. If left empty, it will be assumed that it is a system message.
 // @param senderUsername(type=string, optional=true) The username of the user to send this message as. If left empty, it will be assumed that it is a system message.
 // @param persist(type=bool, optional=true, default=true) Whether to record this message in the channel history.
-// @return ack(table) Message updated ack.
+// @return ack(table) Message updated ack containing the following variables: 'channelId', 'messageId', 'code', 'username', 'createTime', 'updateTime', and 'persistent'.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) channelMessageUpdate(l *lua.LState) int {
 	channelId := l.CheckString(1)
 
 	messageId := l.CheckString(2)
+	if _, err := uuid.FromString(messageId); err != nil {
+		l.ArgError(2, errChannelMessageIdInvalid.Error())
+		return 0
+	}
 
 	content := l.OptTable(3, nil)
 	contentStr := "{}"
@@ -9394,6 +9603,10 @@ func (n *RuntimeLuaNakamaModule) channelMessageUpdate(l *lua.LState) int {
 		contentBytes, err := json.Marshal(contentMap)
 		if err != nil {
 			l.RaiseError("error encoding metadata: %v", err.Error())
+			return 0
+		}
+		if len(contentBytes) == 0 || contentBytes[0] != byteBracket {
+			l.ArgError(3, "expects message content to be a valid JSON object")
 			return 0
 		}
 		contentStr = string(contentBytes)
@@ -9440,6 +9653,64 @@ func (n *RuntimeLuaNakamaModule) channelMessageUpdate(l *lua.LState) int {
 }
 
 // @group chat
+// @summary Remove a message on a realtime chat channel.
+// @param channelId(type=string) The ID of the channel to send the message on.
+// @param messageId(type=string) The ID of the message to remove.
+// @param senderId(type=string, optional=true) The UUID for the sender of this message. If left empty, it will be assumed that it is a system message.
+// @param senderUsername(type=string, optional=true) The username of the user to send this message as. If left empty, it will be assumed that it is a system message.
+// @param persist(type=bool, optional=true, default=true) Whether to record this message in the channel history.
+// @return ack(table) Message removed ack containing the following variables: 'channelId', 'messageId', 'code', 'username', 'createTime', 'updateTime', and 'persistent'.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) channelMessageRemove(l *lua.LState) int {
+	channelId := l.CheckString(1)
+
+	messageId := l.CheckString(2)
+	if _, err := uuid.FromString(messageId); err != nil {
+		l.ArgError(2, errChannelMessageIdInvalid.Error())
+		return 0
+	}
+
+	s := l.OptString(3, "")
+	senderID := uuid.Nil.String()
+	if s != "" {
+		suid, err := uuid.FromString(s)
+		if err != nil {
+			l.ArgError(3, "expects sender id to either be not set, empty string or a valid UUID")
+			return 0
+		}
+		senderID = suid.String()
+	}
+
+	senderUsername := l.OptString(4, "")
+
+	persist := l.OptBool(5, false)
+
+	channelIdToStreamResult, err := ChannelIdToStream(channelId)
+	if err != nil {
+		l.RaiseError(err.Error())
+		return 0
+	}
+
+	ack, err := ChannelMessageRemove(l.Context(), n.logger, n.db, n.router, channelIdToStreamResult.Stream, channelId, messageId, senderID, senderUsername, persist)
+	if err != nil {
+		l.RaiseError("failed to send channel message: %v", err.Error())
+		return 0
+	}
+
+	ackTable := l.CreateTable(0, 7)
+	ackTable.RawSetString("channelId", lua.LString(ack.ChannelId))
+	ackTable.RawSetString("messageId", lua.LString(ack.MessageId))
+	ackTable.RawSetString("code", lua.LNumber(ack.Code.Value))
+	ackTable.RawSetString("username", lua.LString(ack.Username))
+	ackTable.RawSetString("createTime", lua.LNumber(ack.CreateTime.Seconds))
+	ackTable.RawSetString("updateTime", lua.LNumber(ack.UpdateTime.Seconds))
+	ackTable.RawSetString("persistent", lua.LBool(ack.Persistent.Value))
+
+	l.Push(ackTable)
+	return 1
+}
+
+// @group chat
 // @summary List messages from a realtime chat channel.
 // @param channelId(type=string) The ID of the channel to send the message on.
 // @param limit(type=number, optional=true, default=100) The number of messages to return per page.
@@ -9454,7 +9725,8 @@ func (n *RuntimeLuaNakamaModule) channelMessagesList(l *lua.LState) int {
 
 	limit := l.OptInt(2, 100)
 	if limit < 1 || limit > 100 {
-
+		l.ArgError(2, "limit must be 1-100")
+		return 0
 	}
 
 	forward := l.OptBool(3, true)
@@ -9491,7 +9763,7 @@ func (n *RuntimeLuaNakamaModule) channelMessagesList(l *lua.LState) int {
 		messageTable.RawSetString("userIdOne", lua.LString(message.UserIdOne))
 		messageTable.RawSetString("userIdTwo", lua.LString(message.UserIdTwo))
 
-		messagesTable.RawSetInt(i, messageTable)
+		messagesTable.RawSetInt(i+1, messageTable)
 	}
 
 	l.Push(messagesTable)
@@ -9515,7 +9787,7 @@ func (n *RuntimeLuaNakamaModule) channelMessagesList(l *lua.LState) int {
 // @summary Create a channel identifier to be used in other runtime calls. Does not create a channel.
 // @param senderId(type=string) UserID of the message sender (when applicable). An empty string defaults to the system user.
 // @param target(type=string) Can be the room name, group identifier, or another username.
-// @param chanType(type=int) The type of channel, for example group or direct.
+// @param chanType(type=int) The type of channel, either Room (1), Direct (2), or Group (3).
 // @return channelId(string) The generated ID representing a channel.
 // @return error(error) An optional error value if an error occurred.
 func (n *RuntimeLuaNakamaModule) channelIdBuild(l *lua.LState) int {
@@ -9533,9 +9805,8 @@ func (n *RuntimeLuaNakamaModule) channelIdBuild(l *lua.LState) int {
 	target := l.CheckString(2)
 
 	chanType := l.CheckInt(3)
-
 	if chanType < 1 || chanType > 3 {
-		l.RaiseError("invalid channel type: expects value 1-3")
+		l.ArgError(3, "invalid channel type: expects value 1-3")
 		return 0
 	}
 
@@ -9556,7 +9827,440 @@ func (n *RuntimeLuaNakamaModule) channelIdBuild(l *lua.LState) int {
 	return 1
 }
 
-func getStringMap(vars *lua.LTable) (map[string]string, error) {
+// @group storage
+// @summary List storage index entries
+// @param indexName(type=string) Name of the index to list entries from.
+// @param queryString(type=string) Query to filter index entries.
+// @param limit(type=int) Maximum number of results to be returned.
+// @return objects(table) A list of storage objects.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) storageIndexList(l *lua.LState) int {
+	idxName := l.CheckString(1)
+	queryString := l.CheckString(2)
+	limit := l.OptInt(3, 100)
+	if limit < 1 || limit > 100 {
+		l.ArgError(3, "invalid limit: expects value 1-100")
+		return 0
+	}
+
+	objectList, err := n.storageIndex.List(l.Context(), idxName, queryString, limit)
+	if err != nil {
+		l.RaiseError(err.Error())
+		return 0
+	}
+
+	lv := l.CreateTable(len(objectList.GetObjects()), 0)
+	for i, v := range objectList.GetObjects() {
+		vt := l.CreateTable(0, 9)
+		vt.RawSetString("key", lua.LString(v.Key))
+		vt.RawSetString("collection", lua.LString(v.Collection))
+		if v.UserId != "" {
+			vt.RawSetString("user_id", lua.LString(v.UserId))
+		} else {
+			vt.RawSetString("user_id", lua.LNil)
+		}
+		vt.RawSetString("version", lua.LString(v.Version))
+		vt.RawSetString("permission_read", lua.LNumber(v.PermissionRead))
+		vt.RawSetString("permission_write", lua.LNumber(v.PermissionWrite))
+		vt.RawSetString("create_time", lua.LNumber(v.CreateTime.Seconds))
+		vt.RawSetString("update_time", lua.LNumber(v.UpdateTime.Seconds))
+
+		valueMap := make(map[string]interface{})
+		err = json.Unmarshal([]byte(v.Value), &valueMap)
+		if err != nil {
+			l.RaiseError(fmt.Sprintf("failed to convert value to json: %s", err.Error()))
+			return 0
+		}
+		valueTable := RuntimeLuaConvertMap(l, valueMap)
+		vt.RawSetString("value", valueTable)
+
+		lv.RawSetInt(i+1, vt)
+	}
+	l.Push(lv)
+
+	return 1
+}
+
+// @group satori
+// @summary Get the Satori client.
+// @return satori(table) The satori client.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) getSatori(l *lua.LState) int {
+	satoriFunctions := map[string]lua.LGFunction{
+		"authenticate":      n.satoriAuthenticate,
+		"properties_get":    n.satoriPropertiesGet,
+		"properties_update": n.satoriPropertiesUpdate,
+		"events_publish":    n.satoriEventsPublish,
+		"experiments_list":  n.satoriExperimentsList,
+		"flags_list":        n.satoriFlagsList,
+		"live_events_list":  n.satoriLiveEventsList,
+	}
+
+	satoriMod := l.SetFuncs(l.CreateTable(0, len(satoriFunctions)), satoriFunctions)
+
+	l.Push(satoriMod)
+	return 1
+}
+
+// @group satori
+// @summary Create a new identity.
+// @param id(type=string) The identifier of the identity.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriAuthenticate(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	if err := n.satori.Authenticate(l.Context(), identifier); err != nil {
+		l.RaiseError("failed to satori authenticate: %v", err.Error())
+		return 0
+	}
+
+	return 0
+}
+
+// @group satori
+// @summary Get identity properties.
+// @param id(type=string) The identifier of the identity.
+// @return properties(type=table) The identity properties.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriPropertiesGet(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	props, err := n.satori.PropertiesGet(l.Context(), identifier)
+	if err != nil {
+		l.RaiseError("failed to satori list properties: %v", err.Error())
+		return 0
+	}
+
+	propertiesTable := l.CreateTable(0, 3)
+	propertiesTable.RawSetString("default", RuntimeLuaConvertMapString(l, props.Default))
+	propertiesTable.RawSetString("custom", RuntimeLuaConvertMapString(l, props.Custom))
+	propertiesTable.RawSetString("computed", RuntimeLuaConvertMapString(l, props.Computed))
+
+	l.Push(propertiesTable)
+	return 1
+}
+
+// @group satori
+// @summary Update identity properties.
+// @param id(type=string) The identifier of the identity.
+// @param properties(type=table) The identity properties to update.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriPropertiesUpdate(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	propertiesTable := l.CheckTable(2)
+	if propertiesTable == nil {
+		l.ArgError(2, "expects properties to be a table")
+		return 0
+	}
+	properties := &runtime.PropertiesUpdate{}
+	var conversionError bool
+	propertiesTable.ForEach(func(k lua.LValue, v lua.LValue) {
+		switch k.String() {
+		case "default":
+			if v.Type() != lua.LTTable {
+				conversionError = true
+				l.ArgError(2, "expects default values to be a table of key values and strings")
+				return
+			}
+
+			defaultMap, err := RuntimeLuaConvertLuaTableString(v.(*lua.LTable))
+			if err != nil {
+				conversionError = true
+				l.ArgError(2, fmt.Sprintf("expects default values to be a table of key values and strings: %s", err.Error()))
+				return
+			}
+			properties.Default = defaultMap
+
+		case "custom":
+			if v.Type() != lua.LTTable {
+				conversionError = true
+				l.ArgError(2, "expects custom, values to be a table of key values and strings")
+				return
+			}
+
+			customMap, err := RuntimeLuaConvertLuaTableString(v.(*lua.LTable))
+			if err != nil {
+				conversionError = true
+				l.ArgError(2, fmt.Sprintf("expects custom values to be a table of key values and strings: %s", err.Error()))
+				return
+			}
+			properties.Custom = customMap
+		case "recompute":
+			if v.Type() != lua.LTBool {
+				conversionError = true
+				l.ArgError(3, "expects recompute value to be a bool")
+				return
+			}
+			recompute := lua.LVAsBool(v)
+			properties.Recompute = &recompute
+		}
+	})
+
+	if conversionError {
+		return 0
+	}
+
+	if err := n.satori.PropertiesUpdate(l.Context(), identifier, properties); err != nil {
+		l.RaiseError("failed to satori update properties: %v", err.Error())
+		return 0
+	}
+
+	return 0
+}
+
+// @group satori
+// @summary Publish an event.
+// @param id(type=string) The identifier of the identity.
+// @param events(type=table) An array of events to publish.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriEventsPublish(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	eventsTable := l.CheckTable(2)
+	size := eventsTable.Len()
+	events := make([]*runtime.Event, 0, size)
+	conversionError := false
+	eventsTable.ForEach(func(k, v lua.LValue) {
+		if conversionError {
+			return
+		}
+
+		eventTable, ok := v.(*lua.LTable)
+		if !ok {
+			conversionError = true
+			l.ArgError(1, "expects a valid set of events")
+			return
+		}
+
+		event := &runtime.Event{}
+		eventTable.ForEach(func(k, v lua.LValue) {
+			if conversionError {
+				return
+			}
+
+			switch k.String() {
+			case "name":
+				if v.Type() != lua.LTString {
+					conversionError = true
+					l.ArgError(1, "expects name to be string")
+					return
+				}
+
+				event.Name = v.String()
+			case "id":
+				if v.Type() != lua.LTString {
+					conversionError = true
+					l.ArgError(1, "expects id to be string")
+					return
+				}
+
+				event.Id = v.String()
+			case "value":
+				if v.Type() != lua.LTString {
+					conversionError = true
+					l.ArgError(1, "expects value to be string")
+					return
+				}
+
+				event.Value = v.String()
+			case "metadata":
+				if v.Type() != lua.LTTable {
+					conversionError = true
+					l.ArgError(1, "expects metadata to be table")
+					return
+				}
+				metadataMap, err := RuntimeLuaConvertLuaTableString(v.(*lua.LTable))
+				if err != nil {
+					conversionError = true
+					l.ArgError(2, fmt.Sprintf("expects custom values to be a table of key values and strings: %s", err.Error()))
+					return
+				}
+
+				event.Metadata = metadataMap
+			case "timestamp":
+				if v.Type() != lua.LTNumber {
+					conversionError = true
+					l.ArgError(1, "expects timestamp to be a number")
+					return
+				}
+
+				event.Timestamp = int64(v.(lua.LNumber))
+			}
+		})
+		if conversionError {
+			return
+		}
+
+		events = append(events, event)
+	})
+	if conversionError {
+		return 0
+	}
+
+	if err := n.satori.EventsPublish(l.Context(), identifier, events); err != nil {
+		l.RaiseError("failed to satori publish event: %v", err.Error())
+		return 0
+	}
+
+	return 0
+}
+
+// @group satori
+// @summary List experiments.
+// @param id(type=string) The identifier of the identity.
+// @param names(type=table, optional=true, default=[]) Optional list of experiment names to filter.
+// @return experiments(table) The experiment list.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriExperimentsList(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	namesTable := l.OptTable(2, nil)
+	names := make([]string, 0)
+	if namesTable != nil {
+		var conversionError bool
+		namesTable.ForEach(func(k lua.LValue, v lua.LValue) {
+			if conversionError {
+				return
+			}
+			if v.Type() != lua.LTString {
+				l.ArgError(1, "name filter must be a string")
+				conversionError = true
+				return
+			}
+
+			names = append(names, v.String())
+		})
+
+		if conversionError {
+			return 0
+		}
+	}
+
+	experiments, err := n.satori.ExperimentsList(l.Context(), identifier, names...)
+	if err != nil {
+		l.RaiseError("failed to satori list experiments: %v", err.Error())
+		return 0
+	}
+
+	experimentsTable := l.CreateTable(len(experiments.Experiments), 0)
+	for i, e := range experiments.Experiments {
+		experimentTable := l.CreateTable(0, 2)
+		experimentTable.RawSetString("name", lua.LString(e.Name))
+		experimentTable.RawSetString("value", lua.LString(e.Value))
+
+		experimentsTable.RawSetInt(i+1, experimentTable)
+	}
+
+	l.Push(experimentsTable)
+	return 1
+}
+
+// @group satori
+// @summary List flags.
+// @param id(type=string) The identifier of the identity.
+// @param names(type=table, optional=true, default=[]) Optional list of flag names to filter.
+// @return flags(table) The flag list.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriFlagsList(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	namesTable := l.OptTable(2, nil)
+	names := make([]string, 0)
+	if namesTable != nil {
+		var conversionError bool
+		namesTable.ForEach(func(k lua.LValue, v lua.LValue) {
+			if conversionError {
+				return
+			}
+			if v.Type() != lua.LTString {
+				l.ArgError(1, "name filter must be a string")
+				conversionError = true
+				return
+			}
+
+			names = append(names, v.String())
+		})
+
+		if conversionError {
+			return 0
+		}
+	}
+
+	flags, err := n.satori.FlagsList(l.Context(), identifier, names...)
+	if err != nil {
+		l.RaiseError("failed to satori list flags: %v", err.Error())
+		return 0
+	}
+
+	flagsTable := l.CreateTable(len(flags.Flags), 0)
+	for i, f := range flags.Flags {
+		flagTable := l.CreateTable(0, 3)
+		flagTable.RawSetString("name", lua.LString(f.Name))
+		flagTable.RawSetString("value", lua.LString(f.Value))
+		flagTable.RawSetString("condition_changed", lua.LBool(f.ConditionChanged))
+
+		flagsTable.RawSetInt(i+1, flagTable)
+	}
+
+	l.Push(flagsTable)
+	return 1
+}
+
+// @group satori
+// @summary List live events.
+// @param id(type=string) The identifier of the identity.
+// @param names(type=table, optional=true, default=[]) Optional list of live event names to filter.
+// @return liveEvents(table) The live event list.
+// @return error(error) An optional error value if an error occurred.
+func (n *RuntimeLuaNakamaModule) satoriLiveEventsList(l *lua.LState) int {
+	identifier := l.CheckString(1)
+
+	namesTable := l.OptTable(2, nil)
+	names := make([]string, 0)
+	if namesTable != nil {
+		var conversionError bool
+		namesTable.ForEach(func(k lua.LValue, v lua.LValue) {
+			if conversionError {
+				return
+			}
+			if v.Type() != lua.LTString {
+				l.ArgError(1, "name filter must be a string")
+				conversionError = true
+				return
+			}
+
+			names = append(names, v.String())
+		})
+
+		if conversionError {
+			return 0
+		}
+	}
+
+	liveEvents, err := n.satori.LiveEventsList(l.Context(), identifier, names...)
+	if err != nil {
+		l.RaiseError("failed to satori list live-events: %v", err.Error())
+		return 0
+	}
+
+	liveEventsTable := l.CreateTable(len(liveEvents.LiveEvents), 0)
+	for i, le := range liveEvents.LiveEvents {
+		liveEventTable := l.CreateTable(0, 2)
+		liveEventTable.RawSetString("name", lua.LString(le.Name))
+		liveEventTable.RawSetString("value", lua.LString(le.Value))
+		liveEventTable.RawSetString("description", lua.LString(le.Description))
+		liveEventTable.RawSetString("active_start_time", lua.LNumber(le.ActiveStartTimeSec))
+		liveEventTable.RawSetString("active_time_end", lua.LNumber(le.ActiveEndTimeSec))
+
+		liveEventTable.RawSetInt(i+1, liveEventTable)
+	}
+
+	l.Push(liveEventsTable)
+	return 1
+}
+
+func RuntimeLuaConvertLuaTableString(vars *lua.LTable) (map[string]string, error) {
 	varsMap := make(map[string]string)
 	if vars != nil {
 		var conversionError string

@@ -19,11 +19,15 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -32,6 +36,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -47,8 +52,9 @@ var (
 	protojsonUnmarshaler = &protojson.UnmarshalOptions{
 		DiscardUnknown: false,
 	}
-	metrics = NewLocalMetrics(logger, logger, nil, cfg)
-	_       = CheckConfig(logger, cfg)
+	metrics       = NewLocalMetrics(logger, logger, nil, cfg)
+	storageIdx, _ = NewLocalStorageIndex(logger, nil)
+	_             = CheckConfig(logger, cfg)
 )
 
 type DummyMessageRouter struct{}
@@ -59,6 +65,7 @@ func (d *DummyMessageRouter) SendDeferred(*zap.Logger, []*DeferredMessage) {
 func (d *DummyMessageRouter) SendToPresenceIDs(*zap.Logger, []*PresenceID, *rtapi.Envelope, bool) {
 }
 func (d *DummyMessageRouter) SendToStream(*zap.Logger, PresenceStream, *rtapi.Envelope, bool) {}
+func (d *DummyMessageRouter) SendToAll(*zap.Logger, *rtapi.Envelope, bool)                    {}
 
 type DummySession struct {
 	messages []*rtapi.Envelope
@@ -168,12 +175,34 @@ ON CONFLICT(id) DO NOTHING`, uid, uid.String()); err != nil {
 	}
 }
 
+func WaitForSocket(expected error, cfg *config) {
+	ports := []int{cfg.GetSocket().Port - 1, cfg.GetSocket().Port}
+
+	for _, port := range ports {
+		for {
+			conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+			if conn != nil {
+				_ = conn.Close()
+			}
+
+			if errors.Is(err, expected) {
+				break
+			}
+
+			time.Sleep(300 * time.Millisecond)
+		}
+	}
+}
+
 func NewAPIServer(t *testing.T, runtime *Runtime) (*ApiServer, *Pipeline) {
 	db := NewDB(t)
 	router := &DummyMessageRouter{}
 	tracker := &LocalTracker{}
+	sessionCache := NewLocalSessionCache(3600)
 	pipeline := NewPipeline(logger, cfg, db, protojsonMarshaler, protojsonUnmarshaler, nil, nil, nil, nil, nil, tracker, router, runtime)
-	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, nil, nil, nil, nil, nil, nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime)
+	apiServer := StartApiServer(logger, logger, db, protojsonMarshaler, protojsonUnmarshaler, cfg, "3.0.0", nil, storageIdx, nil, nil, nil, sessionCache, nil, nil, nil, tracker, router, nil, metrics, pipeline, runtime)
+
+	WaitForSocket(nil, cfg)
 	return apiServer, pipeline
 }
 
@@ -182,7 +211,7 @@ func NewSession(t *testing.T, customID string) (*grpc.ClientConn, apigrpc.Nakama
 	outgoingCtx := metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
 		"authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte("defaultkey:")),
 	}))
-	conn, err := grpc.DialContext(outgoingCtx, "localhost:7349", grpc.WithInsecure())
+	conn, err := grpc.DialContext(outgoingCtx, "localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +238,7 @@ func NewAuthenticatedAPIClient(t *testing.T, customID string) (*grpc.ClientConn,
 	outgoingCtx := metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
 		"authorization": "Bearer " + session.Token,
 	}))
-	conn, err := grpc.DialContext(outgoingCtx, "localhost:7349", grpc.WithInsecure())
+	conn, err := grpc.DialContext(outgoingCtx, "localhost:7349", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama/v3/social"
 	"go.uber.org/atomic"
@@ -68,7 +68,7 @@ type RuntimeJavaScriptMatchCore struct {
 	ctxCancelFn context.CancelFunc
 }
 
-func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache) (RuntimeMatchCore, error) {
+func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry *StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node, version string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache, storageIndex StorageIndex) (RuntimeMatchCore, error) {
 	runtime := goja.New()
 
 	jsLoggerInst, err := NewJsLogger(runtime, logger)
@@ -76,9 +76,8 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
 	}
 
-	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, eventFn, matchCreateFn)
-	nk := runtime.ToValue(nakamaModule.Constructor(runtime))
-	nkInst, err := runtime.New(nk)
+	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, storageIndex, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, eventFn, matchCreateFn)
+	nk, err := nakamaModule.Constructor(runtime)
 	if err != nil {
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
 	}
@@ -88,7 +87,7 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 	runtime.RunProgram(modCache.Modules[modCache.Names[0]].Program)
 	freezeGlobalObject(config, runtime)
 
-	ctx := NewRuntimeJsInitContext(runtime, node, config.GetRuntime().Environment)
+	ctx := NewRuntimeJsInitContext(runtime, node, version, config.GetRuntime().Environment)
 	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MODE, RuntimeExecutionModeMatch)
 	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_ID, fmt.Sprintf("%v.%v", id.String(), node))
 	ctx.Set(__RUNTIME_JAVASCRIPT_CTX_MATCH_NODE, node)
@@ -165,7 +164,7 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 		ctx:           ctx,
 
 		loggerModule: jsLoggerInst,
-		nakamaModule: nkInst,
+		nakamaModule: nk,
 		ctxCancelFn:  ctxCancelFn,
 	}
 

@@ -17,16 +17,16 @@ package server
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"math"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/blugelabs/bluge"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"github.com/heroiclabs/nakama-common/runtime"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -1591,6 +1591,27 @@ func TestMatchmakerAddAndMatchAuthoritative(t *testing.T) {
 	}
 }
 
+func TestGroupIndexes(t *testing.T) {
+	a := &MatchmakerIndex{Ticket: "a", Count: 1, CreatedAt: 100}
+	b := &MatchmakerIndex{Ticket: "b", Count: 2, CreatedAt: 110}
+	c := &MatchmakerIndex{Ticket: "c", Count: 1, CreatedAt: 120}
+	d := &MatchmakerIndex{Ticket: "d", Count: 1, CreatedAt: 130}
+	e := &MatchmakerIndex{Ticket: "e", Count: 3, CreatedAt: 140}
+	f := &MatchmakerIndex{Ticket: "f", Count: 2, CreatedAt: 150}
+	indexes := []*MatchmakerIndex{a, b, c, d, e, f}
+	required := 2
+
+	groups := groupIndexes(indexes, required)
+
+	assert.EqualValues(t, []*MatchmakerIndexGroup{
+		{indexes: []*MatchmakerIndex{c, a}, avgCreatedAt: 110},
+		{indexes: []*MatchmakerIndex{d, a}, avgCreatedAt: 115},
+		{indexes: []*MatchmakerIndex{b}, avgCreatedAt: 110},
+		{indexes: []*MatchmakerIndex{d, c}, avgCreatedAt: 125},
+		{indexes: []*MatchmakerIndex{f}, avgCreatedAt: 150},
+	}, groups, "groups did not match")
+}
+
 // createTestMatchmaker creates a minimally configured LocalMatchmaker for testing purposes
 //
 // an optional messageCallback can be provided, in which case the callback will be
@@ -1604,9 +1625,10 @@ func createTestMatchmaker(t fatalable, logger *zap.Logger, tickerActive bool, me
 	cfg.Database.Addresses = []string{"postgres:postgres@localhost:5432/nakama"}
 	cfg.Matchmaker.IntervalSec = 1
 	cfg.Matchmaker.MaxIntervals = 5
+	cfg.Matchmaker.RevPrecision = true
 	// configure a path runtime can use (it will mkdir this, so it must be writable)
 	var err error
-	cfg.Runtime.Path, err = ioutil.TempDir("", "nakama-matchmaker-test")
+	cfg.Runtime.Path, err = os.MkdirTemp("", "nakama-matchmaker-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1633,9 +1655,7 @@ func createTestMatchmaker(t fatalable, logger *zap.Logger, tickerActive bool, me
 		t.Fatalf("error creating test match registry: %v", err)
 	}
 
-	runtime, _, err := NewRuntime(context.Background(), logger, logger, nil, jsonpbMarshaler, jsonpbUnmarshaler, cfg,
-		nil, nil, nil, nil, sessionRegistry, nil, nil,
-		nil, tracker, metrics, nil, messageRouter)
+	runtime, _, err := NewRuntime(context.Background(), logger, logger, nil, jsonpbMarshaler, jsonpbUnmarshaler, cfg, "", nil, nil, nil, nil, sessionRegistry, nil, nil, nil, tracker, metrics, nil, messageRouter, storageIdx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1694,14 +1714,12 @@ func NewLocalBenchMatchmaker(logger, startupLogger *zap.Logger, config Config, r
 		ctx:         ctx,
 		ctxCancelFn: ctxCancelFn,
 
-		batch:          bluge.NewBatch(),
 		indexWriter:    indexWriter,
 		sessionTickets: make(map[string]map[string]struct{}),
 		partyTickets:   make(map[string]map[string]struct{}),
-		entries:        make(map[string][]*MatchmakerEntry),
 		indexes:        make(map[string]*MatchmakerIndex),
 		activeIndexes:  make(map[string]*MatchmakerIndex),
-		revCache:       make(map[string]map[string]bool),
+		revCache:       &MapOf[string, map[string]bool]{},
 	}
 
 	if tickerActive {
@@ -2418,26 +2436,31 @@ func BenchmarkMatchmakerProcessTickets100_min2_max2(b *testing.B) {
 	benchmarkMatchmakerProcessTickets(100, 50, 2, 2, b)
 }
 func BenchmarkMatchmakerProcessTickets500_min2_max2(b *testing.B) {
-	benchmarkMatchmakerProcessTickets(500, 5000, 2, 2, b)
+	benchmarkMatchmakerProcessTickets(500, 250, 2, 2, b)
 }
 
 func BenchmarkMatchmakerProcessTickets1_000_min2_max2(b *testing.B) {
-	benchmarkMatchmakerProcessTickets(1_000, 5000, 2, 2, b)
+	benchmarkMatchmakerProcessTickets(1_000, 100, 2, 2, b)
 }
-func BenchmarkMatchmakerProcessTickets10_000_min2_max2(b *testing.B) {
-	benchmarkMatchmakerProcessTickets(10_000, 5000, 2, 2, b)
-}
+
+//func BenchmarkMatchmakerProcessTickets10_000_min2_max2(b *testing.B) {
+//	benchmarkMatchmakerProcessTickets(10_000, 5000, 2, 2, b)
+//}
 
 /*func BenchmarkMatchmakerProcessTickets100_000_min2_max2(b *testing.B) {
 	benchmarkMatchmakerProcessTickets(100_000, 2, 2, b)
 }*/
 
-//func BenchmarkMatchmakerProcessTickets100_min4_max4(b *testing.B) {
-//	benchmarkMatchmakerProcessTickets(100, 4, 4, b)
-//}
-//func BenchmarkMatchmakerProcessTickets1_000_min4_max4(b *testing.B) {
-//	benchmarkMatchmakerProcessTickets(1_000, 4, 4, b)
-//}
+func BenchmarkMatchmakerProcessTickets100_min4_max10(b *testing.B) {
+	benchmarkMatchmakerProcessTickets(100, 10, 4, 10, b)
+}
+func BenchmarkMatchmakerProcessTickets500_min4_max10(b *testing.B) {
+	benchmarkMatchmakerProcessTickets(500, 50, 4, 10, b)
+}
+func BenchmarkMatchmakerProcessTickets1_000_min4_max10(b *testing.B) {
+	benchmarkMatchmakerProcessTickets(1_000, 100, 4, 10, b)
+}
+
 //func BenchmarkMatchmakerProcessTickets10_000_min4_max4(b *testing.B) {
 //	benchmarkMatchmakerProcessTickets(10_000, 4, 4, b)
 //}

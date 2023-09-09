@@ -284,6 +284,11 @@ service Nakama {
     };
   }
 
+  // Delete the current user's account.
+  rpc DeleteAccount (google.protobuf.Empty) returns (google.protobuf.Empty) {
+    option (google.api.http).delete = "/v2/account";
+  }
+
   // Delete one or more users by ID or username.
   rpc DeleteFriends (api.DeleteFriendsRequest) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/friend";
@@ -302,6 +307,11 @@ service Nakama {
   // Delete one or more notifications for the current user.
   rpc DeleteNotifications (api.DeleteNotificationsRequest) returns (google.protobuf.Empty) {
     option (google.api.http).delete = "/v2/notification";
+  }
+
+  // Delete a tournament record.
+  rpc DeleteTournamentRecord (api.DeleteTournamentRecordRequest) returns (google.protobuf.Empty) {
+    option (google.api.http).delete = "/v2/tournament/{tournament_id}";
   }
 
   // Delete one or more objects by ID or username.

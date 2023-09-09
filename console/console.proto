@@ -102,6 +102,14 @@ service Console {
     };
   }
 
+  // Add/join members to a group.
+  rpc AddGroupUsers (AddGroupUsersRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v2/console/group/{group_id}/add",
+      body: "*"
+    };
+  }
+
   // Ban a user.
   rpc BanAccount (AccountId) returns (google.protobuf.Empty) {
     option (google.api.http).post = "/v2/console/account/{id}/ban";
@@ -279,7 +287,7 @@ service Console {
   }
 
   // List leaderboards
-  rpc ListLeaderboards (google.protobuf.Empty) returns (LeaderboardList) {
+  rpc ListLeaderboards (LeaderboardListRequest) returns (LeaderboardList) {
     option (google.api.http).get = "/v2/console/leaderboard";
   }
 
@@ -519,6 +527,16 @@ message AddUserRequest {
   bool newsletter_subscription = 5;
 }
 
+// Add/join users to a group.
+message AddGroupUsersRequest {
+  // Users to add/join.
+  string ids = 1;
+  // ID of the group to add them to.
+  string group_id = 2;
+  // Whether it is a join request.
+  bool join_request = 3;
+}
+
 // API Explorer List of Endpoints
 message ApiEndpointList {
   repeated ApiEndpointDescriptor endpoints = 1;
@@ -684,12 +702,26 @@ message Leaderboard {
   bool authoritative = 19;
   // Tournament.
   bool tournament = 20;
+  // The UNIX time when the tournament was last reset. A computed value.
+  uint32 prev_reset = 21;
+  // The UNIX time when the tournament is next playable. A computed value.
+  uint32 next_reset = 22;
+}
+
+// List leaderboards.
+message LeaderboardListRequest {
+  // An optional cursor to paginate from.
+  string cursor = 1;
 }
 
 // A list of leaderboards.
 message LeaderboardList {
   // The list of leaderboards returned.
   repeated Leaderboard leaderboards = 1;
+  // Total count of leaderboards and tournaments.
+  int32 total = 2;
+  // A cursor, if any.
+  string cursor = 3;
 }
 
 // Get Leaderboard.
