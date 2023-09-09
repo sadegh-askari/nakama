@@ -7,6 +7,7 @@ require (
 	github.com/blugelabs/bluge_segment_api v0.2.0
 	github.com/blugelabs/query_string v0.3.0
 	github.com/dop251/goja v0.0.0-20221003171542-5ea1285e6c91
+	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gofrs/uuid/v5 v5.0.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/snappy v0.0.4
@@ -82,4 +83,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 )
 
-replace github.com/heroiclabs/nakama-common v1.24.0 => github.com/sadegh-askari/nakama-common v1.24.1
+replace github.com/heroiclabs/nakama-common v1.28.1 => github.com/sadegh-askari/nakama-common v1.28.2
