@@ -793,8 +793,8 @@ export enum ApiStoreProvider {
   GOOGLE_PLAY_STORE = 1,
   HUAWEI_APP_GALLERY = 2,
   FACEBOOK_INSTANT_STORE = 3,
-  CAFEBAZAAR = 4,
-  MYKET = 5,
+  CAFEBAZAAR = 10,
+  MYKET = 11,
 }
 
 /** A list of validated subscriptions stored by Nakama. */
