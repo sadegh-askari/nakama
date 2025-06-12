@@ -75,3 +75,5 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250425173222-7b384671a197 // indirect
 )
+
+replace github.com/heroiclabs/nakama-common v1.37.0 => github.com/sadegh-askari/nakama-common v1.37.1-0.20250612094739-028b9ab3a7ba

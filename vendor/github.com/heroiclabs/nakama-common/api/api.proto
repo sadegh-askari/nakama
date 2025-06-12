@@ -1284,6 +1284,11 @@ enum StoreProvider {
   HUAWEI_APP_GALLERY = 2;
   // Facebook Instant Store
   FACEBOOK_INSTANT_STORE = 3;
+
+  // CafeBazaar
+  CAFEBAZAAR = 10;
+  // Myket
+  MYKET = 11;
 }
 
 // Environment where a purchase/subscription took place,
