@@ -43,7 +43,10 @@ export interface AccountList {
   users?:Array<ApiUser>
 }
 
+/** Add/join users to a group. */
 export interface AddGroupUsersRequest {
+  // ID of the group to add them to.
+  group_id?:string
   // Users to add/join.
   ids?:string
   // Whether it is a join request.
@@ -107,6 +110,7 @@ export interface AuthenticateRequest {
 
 export interface CallApiEndpointRequest {
   body?:string
+  method?:string
   session_vars?:Map<string, string>
   user_id?:string
 }
@@ -114,12 +118,6 @@ export interface CallApiEndpointRequest {
 export interface CallApiEndpointResponse {
   body?:string
   error_message?:string
-}
-
-export interface CallRpcEndpointRequest {
-  body?:string
-  session_vars?:Map<string, string>
-  user_id?:string
 }
 
 /** The current server configuration and any associated warnings. */
@@ -293,9 +291,12 @@ export interface NotificationList {
   prev_cursor?:string
 }
 
+/** Make a user's mfa required or not. */
 export interface RequireUserMfaRequest {
   // Required.
   required?:boolean
+  // User username.
+  username?:string
 }
 
 export interface RuntimeInfo {
@@ -394,11 +395,15 @@ export interface StorageListObject {
   version?:string
 }
 
+/** Unlink a particular device ID from a user's account. */
 export interface UnlinkDeviceRequest {
   // Device ID to unlink.
   device_id?:string
+  // User ID to unlink from.
+  id?:string
 }
 
+/** Update user account information. */
 export interface UpdateAccountRequest {
   // Avatar URL.
   avatar_url?:string
@@ -410,6 +415,8 @@ export interface UpdateAccountRequest {
   display_name?:string
   // Email.
   email?:string
+  // User ID to update.
+  id?:string
   // Langtag.
   lang_tag?:string
   // Location.
@@ -426,11 +433,14 @@ export interface UpdateAccountRequest {
   wallet?:string
 }
 
+/** Update group information. */
 export interface UpdateGroupRequest {
   // Avatar URL.
   avatar_url?:string
   // Description.
   description?:string
+  // Group ID to update.
+  id?:string
   // Langtag.
   lang_tag?:string
   // The maximum number of members allowed.
@@ -470,10 +480,6 @@ export interface UserListUser {
   username?:string
 }
 
-/** - USER_ROLE_ADMIN: All access
- - USER_ROLE_DEVELOPER: Best for developers, also enables APIs and API explorer
- - USER_ROLE_MAINTAINER: Best for users who regularly update player information.
- - USER_ROLE_READONLY: Read-only role for those only need to view data */
 export enum UserRole {
   USER_ROLE_UNKNOWN = 0,
   USER_ROLE_ADMIN = 1,
@@ -508,11 +514,18 @@ export interface WalletLedgerList {
   prev_cursor?:string
 }
 
+/** Write a new storage object or update an existing one. */
 export interface WriteStorageObjectRequest {
+  // Collection.
+  collection?:string
+  // Key.
+  key?:string
   // Read permission value.
   permission_read?:number
   // Write permission value.
   permission_write?:number
+  // Owner user ID.
+  user_id?:string
   // Value.
   value?:string
   // Version for OCC.
@@ -591,7 +604,7 @@ export interface ApiChannelMessageList {
 export interface ApiFriend {
   // Metadata.
   metadata?:string
-  // The friend status. /  / one of "Friend.State".
+  // The friend status.
   state?:number
   // Time of the latest relationship update.
   update_time?:string
@@ -780,6 +793,8 @@ export enum ApiStoreProvider {
   GOOGLE_PLAY_STORE = 1,
   HUAWEI_APP_GALLERY = 2,
   FACEBOOK_INSTANT_STORE = 3,
+  CAFEBAZAAR = 4,
+  MYKET = 5,
 }
 
 /** A list of validated subscriptions stored by Nakama. */
@@ -1147,7 +1162,7 @@ export class ConsoleService {
   }
 
   /** API Explorer - call a custom RPC endpoint */
-  callRpcEndpoint(auth_token: string, method: string, body: CallRpcEndpointRequest): Observable<CallApiEndpointResponse> {
+  callRpcEndpoint(auth_token: string, method: string, body: CallApiEndpointRequest): Observable<CallApiEndpointResponse> {
     method = encodeURIComponent(String(method))
     const urlPath = `/v2/console/api/endpoints/rpc/${method}`;
     let params = new HttpParams({ encoder: new CustomHttpParamEncoder() });

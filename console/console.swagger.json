@@ -60,7 +60,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from",
+            "description": "Cursor to start from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -77,7 +77,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -121,7 +120,7 @@
           },
           {
             "name": "limit",
-            "description": "Max number of results per page",
+            "description": "Max number of results per page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -129,7 +128,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from",
+            "description": "Cursor to retrieve a page of records from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -178,7 +177,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -216,7 +214,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -240,61 +237,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "username": {
-                  "type": "string",
-                  "description": "Username."
-                },
-                "display_name": {
-                  "type": "string",
-                  "description": "Display name."
-                },
-                "metadata": {
-                  "type": "string",
-                  "description": "Metadata."
-                },
-                "avatar_url": {
-                  "type": "string",
-                  "description": "Avatar URL."
-                },
-                "lang_tag": {
-                  "type": "string",
-                  "description": "Langtag."
-                },
-                "location": {
-                  "type": "string",
-                  "description": "Location."
-                },
-                "timezone": {
-                  "type": "string",
-                  "description": "Timezone."
-                },
-                "custom_id": {
-                  "type": "string",
-                  "description": "Custom ID."
-                },
-                "email": {
-                  "type": "string",
-                  "description": "Email."
-                },
-                "password": {
-                  "type": "string",
-                  "description": "Password."
-                },
-                "device_ids": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "description": "Device ID modifications."
-                },
-                "wallet": {
-                  "type": "string",
-                  "description": "Wallet."
-                }
-              },
-              "description": "Update user account information."
+              "$ref": "#/definitions/nakamaconsoleUpdateAccountRequest"
             }
           }
         ],
@@ -311,7 +254,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -408,7 +350,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -480,7 +421,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -520,7 +460,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -553,7 +492,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -586,7 +524,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -619,7 +556,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -643,14 +579,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "device_id": {
-                  "type": "string",
-                  "description": "Device ID to unlink."
-                }
-              },
-              "description": "Unlink a particular device ID from a user's account."
+              "$ref": "#/definitions/consoleUnlinkDeviceRequest"
             }
           }
         ],
@@ -667,7 +596,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -700,7 +628,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -733,7 +660,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -766,7 +692,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -799,7 +724,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -832,7 +756,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -865,7 +788,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -905,7 +827,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -974,22 +895,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "type": "string"
-                },
-                "user_id": {
-                  "type": "string"
-                },
-                "session_vars": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              },
-              "title": "API Explorer request definition for CallApiEndpoint"
+              "$ref": "#/definitions/consoleCallApiEndpointRequest"
             }
           }
         ],
@@ -1028,22 +934,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "body": {
-                  "type": "string"
-                },
-                "user_id": {
-                  "type": "string"
-                },
-                "session_vars": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              },
-              "title": "API Explorer request definition for CallApiEndpoint"
+              "$ref": "#/definitions/consoleCallApiEndpointRequest"
             }
           }
         ],
@@ -1073,7 +964,6 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Authenticate a console user with username and password.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1099,7 +989,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1113,7 +1002,6 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Log out a session and invalidate a session token.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1147,7 +1035,6 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Request to change MFA.",
             "in": "body",
             "required": true,
             "schema": {
@@ -1181,7 +1068,7 @@
         "parameters": [
           {
             "name": "type",
-            "description": "Type of the chat channel",
+            "description": "Type of the chat channel.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1195,21 +1082,21 @@
           },
           {
             "name": "label",
-            "description": "Label of the channel, if a standard chat room",
+            "description": "Label of the channel, if a standard chat room.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "group_id",
-            "description": "Group ID of the channel, if a group chat",
+            "description": "Group ID of the channel, if a group chat.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "user_id_one",
-            "description": "User IDs, if a direct chat",
+            "description": "User IDs, if a direct chat.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1222,7 +1109,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from",
+            "description": "Cursor to start from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1284,7 +1171,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to start from",
+            "description": "Cursor to start from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1303,7 +1190,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1343,7 +1229,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1383,7 +1268,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1407,18 +1291,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "ids": {
-                  "type": "string",
-                  "description": "Users to add/join."
-                },
-                "join_request": {
-                  "type": "boolean",
-                  "description": "Whether it is a join request."
-                }
-              },
-              "description": "Add/join users to a group."
+              "$ref": "#/definitions/nakamaconsoleAddGroupUsersRequest"
             }
           }
         ],
@@ -1465,7 +1338,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1496,7 +1368,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1520,39 +1391,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Name."
-                },
-                "description": {
-                  "type": "string",
-                  "description": "Description."
-                },
-                "lang_tag": {
-                  "type": "string",
-                  "description": "Langtag."
-                },
-                "metadata": {
-                  "type": "string",
-                  "description": "Metadata."
-                },
-                "avatar_url": {
-                  "type": "string",
-                  "description": "Avatar URL."
-                },
-                "open": {
-                  "type": "boolean",
-                  "description": "Anyone can join open groups, otherwise only admins can accept members."
-                },
-                "max_count": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "The maximum number of members allowed."
-                }
-              },
-              "description": "Update group information."
+              "$ref": "#/definitions/nakamaconsoleUpdateGroupRequest"
             }
           }
         ],
@@ -1759,7 +1598,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -1792,7 +1630,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2071,7 +1908,7 @@
         "parameters": [
           {
             "name": "user_id",
-            "description": "User ID to filter purchases for",
+            "description": "User ID to filter purchases for.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2135,7 +1972,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2181,14 +2017,14 @@
         "parameters": [
           {
             "name": "user_id",
-            "description": "User ID to filter purchases for",
+            "description": "User ID to filter purchases for.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
-            "description": "Max number of results per page",
+            "description": "Max number of results per page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2196,7 +2032,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from",
+            "description": "Cursor to retrieve a page of records from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2281,21 +2117,21 @@
           },
           {
             "name": "key",
-            "description": "Key to filter objects for",
+            "description": "Key to filter objects for.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "collection",
-            "description": "Collection name to filter objects for",
+            "description": "Collection name to filter objects for.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from",
+            "description": "Cursor to retrieve a page of records from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2312,7 +2148,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2403,7 +2238,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2492,28 +2326,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "type": "string",
-                  "description": "Value."
-                },
-                "version": {
-                  "type": "string",
-                  "description": "Version for OCC."
-                },
-                "permission_read": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "Read permission value."
-                },
-                "permission_write": {
-                  "type": "integer",
-                  "format": "int32",
-                  "description": "Write permission value."
-                }
-              },
-              "description": "Write a new storage object or update an existing one."
+              "$ref": "#/definitions/consoleWriteStorageObjectRequest"
             }
           }
         ],
@@ -2530,7 +2343,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2597,14 +2409,14 @@
         "parameters": [
           {
             "name": "user_id",
-            "description": "UserID to filter subscriptions for",
+            "description": "UserID to filter subscriptions for.",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "limit",
-            "description": "Max number of results per page",
+            "description": "Max number of results per page.",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -2612,7 +2424,7 @@
           },
           {
             "name": "cursor",
-            "description": "Cursor to retrieve a page of records from",
+            "description": "Cursor to retrieve a page of records from.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2652,7 +2464,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2683,7 +2494,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2717,7 +2527,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2741,14 +2550,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "required": {
-                  "type": "boolean",
-                  "description": "Required."
-                }
-              },
-              "description": "Make a user's mfa required or not."
+              "$ref": "#/definitions/consoleRequireUserMfaRequest"
             }
           }
         ],
@@ -2765,7 +2567,6 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object",
               "properties": {}
             }
           },
@@ -2935,7 +2736,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "A list of messages."
@@ -2965,7 +2765,7 @@
         "state": {
           "type": "integer",
           "format": "int32",
-          "description": "The friend status.\n\none of \"Friend.State\"."
+          "description": "The friend status."
         },
         "update_time": {
           "type": "string",
@@ -2985,7 +2785,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The Friend objects."
@@ -3061,7 +2860,6 @@
         "group_users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "User-role pairs for a group."
@@ -3141,7 +2939,6 @@
         "records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A list of leaderboard records."
@@ -3149,7 +2946,6 @@
         "owner_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "A batched set of leaderboard records belonging to specified owners."
@@ -3176,7 +2972,6 @@
         "validated_purchases": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedPurchase"
           },
           "description": "Stored validated purchases."
@@ -3287,10 +3082,12 @@
         "APPLE_APP_STORE",
         "GOOGLE_PLAY_STORE",
         "HUAWEI_APP_GALLERY",
-        "FACEBOOK_INSTANT_STORE"
+        "FACEBOOK_INSTANT_STORE",
+        "CAFEBAZAAR",
+        "MYKET"
       ],
       "default": "APPLE_APP_STORE",
-      "description": "- APPLE_APP_STORE: Apple App Store\n - GOOGLE_PLAY_STORE: Google Play Store\n - HUAWEI_APP_GALLERY: Huawei App Gallery\n - FACEBOOK_INSTANT_STORE: Facebook Instant Store",
+      "description": "- APPLE_APP_STORE: Apple App Store\n - GOOGLE_PLAY_STORE: Google Play Store\n - HUAWEI_APP_GALLERY: Huawei App Gallery\n - FACEBOOK_INSTANT_STORE: Facebook Instant Store\n - CAFEBAZAAR: CafeBazaar\n - MYKET: Myket",
       "title": "Validation Provider,"
     },
     "apiSubscriptionList": {
@@ -3299,7 +3096,6 @@
         "validated_subscriptions": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiValidatedSubscription"
           },
           "description": "Stored validated subscriptions."
@@ -3321,7 +3117,6 @@
         "user_groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/UserGroupListUserGroup"
           },
           "description": "Group-role pairs for a user."
@@ -3459,7 +3254,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiStorageObject"
           },
           "description": "The user's storage."
@@ -3467,7 +3261,6 @@
         "friends": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiFriend"
           },
           "description": "The user's friends."
@@ -3475,7 +3268,6 @@
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "The user's groups."
@@ -3483,7 +3275,6 @@
         "messages": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiChannelMessage"
           },
           "description": "The user's chat messages."
@@ -3491,7 +3282,6 @@
         "leaderboard_records": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiLeaderboardRecord"
           },
           "description": "The user's leaderboard records."
@@ -3499,7 +3289,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiNotification"
           },
           "description": "The user's notifications."
@@ -3507,7 +3296,6 @@
         "wallet_ledgers": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "The user's wallet ledger items."
@@ -3521,7 +3309,6 @@
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaapiUser"
           },
           "description": "A list of users."
@@ -3586,14 +3373,12 @@
         "endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         },
         "rpc_endpoints": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleApiEndpointDescriptor"
           }
         }
@@ -3655,6 +3440,27 @@
       },
       "description": "Authenticate a console user with username and password."
     },
+    "consoleCallApiEndpointRequest": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "session_vars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "API Explorer request definition for CallApiEndpoint"
+    },
     "consoleCallApiEndpointResponse": {
       "type": "object",
       "properties": {
@@ -3677,7 +3483,6 @@
         "warnings": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/ConfigWarning"
           },
           "description": "Any warnings about the current config."
@@ -3723,7 +3528,6 @@
         "members": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/GroupUserListGroupUser"
           },
           "description": "The group's list of members."
@@ -3760,7 +3564,6 @@
         "presences": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/realtimeUserPresence"
           },
           "description": "Presence list."
@@ -3776,6 +3579,20 @@
         }
       },
       "title": "Match state"
+    },
+    "consoleRequireUserMfaRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "User username."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Required."
+        }
+      },
+      "description": "Make a user's mfa required or not."
     },
     "consoleRuntimeInfo": {
       "type": "object",
@@ -3804,7 +3621,6 @@
         "go_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Go loaded modules"
@@ -3812,7 +3628,6 @@
         "lua_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "Lua loaded modules"
@@ -3820,7 +3635,6 @@
         "js_modules": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/RuntimeInfoModuleInfo"
           },
           "title": "JavaScript loaded modules"
@@ -3844,7 +3658,6 @@
         "nodes": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStatusListStatus"
           },
           "description": "List of nodes and their stats."
@@ -3929,7 +3742,6 @@
         "objects": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleStorageListObject"
           },
           "description": "List of storage objects matching list/filter operation."
@@ -3988,13 +3800,26 @@
       },
       "description": "An object within the storage engine."
     },
+    "consoleUnlinkDeviceRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User ID to unlink from."
+        },
+        "device_id": {
+          "type": "string",
+          "description": "Device ID to unlink."
+        }
+      },
+      "description": "Unlink a particular device ID from a user's account."
+    },
     "consoleUserList": {
       "type": "object",
       "properties": {
         "users": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleUserListUser"
           },
           "description": "A list of users."
@@ -4037,8 +3862,7 @@
         "USER_ROLE_MAINTAINER",
         "USER_ROLE_READONLY"
       ],
-      "default": "USER_ROLE_UNKNOWN",
-      "title": "- USER_ROLE_ADMIN: All access\n - USER_ROLE_DEVELOPER: Best for developers, also enables APIs and API explorer\n - USER_ROLE_MAINTAINER: Best for users who regularly update player information.\n - USER_ROLE_READONLY: Read-only role for those only need to view data"
+      "default": "USER_ROLE_UNKNOWN"
     },
     "consoleWalletLedger": {
       "type": "object",
@@ -4078,7 +3902,6 @@
         "items": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleWalletLedger"
           },
           "description": "A list of wallet ledger items."
@@ -4094,6 +3917,42 @@
       },
       "description": "List of wallet ledger items for a particular user."
     },
+    "consoleWriteStorageObjectRequest": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "string",
+          "description": "Collection."
+        },
+        "key": {
+          "type": "string",
+          "description": "Key."
+        },
+        "user_id": {
+          "type": "string",
+          "description": "Owner user ID."
+        },
+        "value": {
+          "type": "string",
+          "description": "Value."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version for OCC."
+        },
+        "permission_read": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Read permission value."
+        },
+        "permission_write": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Write permission value."
+        }
+      },
+      "description": "Write a new storage object or update an existing one."
+    },
     "googlerpcStatus": {
       "type": "object",
       "properties": {
@@ -4107,7 +3966,6 @@
         "details": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
         }
@@ -4131,7 +3989,6 @@
         "devices": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiAccountDevice"
           },
           "description": "The devices which belong to the user's account."
@@ -4317,13 +4174,30 @@
       },
       "description": "Account information."
     },
+    "nakamaconsoleAddGroupUsersRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "string",
+          "description": "Users to add/join."
+        },
+        "group_id": {
+          "type": "string",
+          "description": "ID of the group to add them to."
+        },
+        "join_request": {
+          "type": "boolean",
+          "description": "Whether it is a join request."
+        }
+      },
+      "description": "Add/join users to a group."
+    },
     "nakamaconsoleGroupList": {
       "type": "object",
       "properties": {
         "groups": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/apiGroup"
           },
           "description": "A list of groups."
@@ -4454,7 +4328,6 @@
         "leaderboards": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleLeaderboard"
           },
           "description": "The list of leaderboards returned."
@@ -4477,7 +4350,6 @@
         "matches": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/consoleMatchListMatch"
           }
         }
@@ -4529,7 +4401,6 @@
         "notifications": {
           "type": "array",
           "items": {
-            "type": "object",
             "$ref": "#/definitions/nakamaconsoleNotification"
           },
           "description": "List of notifications."
@@ -4544,14 +4415,117 @@
         }
       }
     },
+    "nakamaconsoleUpdateAccountRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User ID to update."
+        },
+        "username": {
+          "type": "string",
+          "description": "Username."
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Metadata."
+        },
+        "avatar_url": {
+          "type": "string",
+          "description": "Avatar URL."
+        },
+        "lang_tag": {
+          "type": "string",
+          "description": "Langtag."
+        },
+        "location": {
+          "type": "string",
+          "description": "Location."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Timezone."
+        },
+        "custom_id": {
+          "type": "string",
+          "description": "Custom ID."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password."
+        },
+        "device_ids": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Device ID modifications."
+        },
+        "wallet": {
+          "type": "string",
+          "description": "Wallet."
+        }
+      },
+      "description": "Update user account information."
+    },
+    "nakamaconsoleUpdateGroupRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Group ID to update."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description."
+        },
+        "lang_tag": {
+          "type": "string",
+          "description": "Langtag."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Metadata."
+        },
+        "avatar_url": {
+          "type": "string",
+          "description": "Avatar URL."
+        },
+        "open": {
+          "type": "boolean",
+          "description": "Anyone can join open groups, otherwise only admins can accept members."
+        },
+        "max_count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The maximum number of members allowed."
+        }
+      },
+      "description": "Update group information."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
-        "@type": {
+        "type_url": {
           "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
         }
-      },
-      "additionalProperties": {}
+      }
     },
     "realtimeUserPresence": {
       "type": "object",
