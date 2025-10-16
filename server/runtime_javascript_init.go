@@ -28,7 +28,7 @@ import (
 
 const INIT_MODULE_FN_NAME = "InitModule"
 
-var inlinedFunctionError = errors.New("function literal found: javascript functions cannot be inlined")
+var errInlinedFunction = errors.New("function literal found: javascript functions cannot be inlined")
 
 type RuntimeJavascriptMatchHandlers struct {
 	sync.RWMutex
@@ -272,6 +272,8 @@ func (im *RuntimeJavascriptInitModule) mappings(r *goja.Runtime) map[string]func
 		"registerAfterListSubscriptions":                  im.registerAfterListSubscriptions(r),
 		"registerBeforeGetSubscription":                   im.registerBeforeGetSubscription(r),
 		"registerAfterGetSubscription":                    im.registerAfterGetSubscription(r),
+		"registerBeforeListParties":                       im.registerBeforeListParties(r),
+		"registerAfterListParties":                        im.registerAfterListParties(r),
 		"registerBeforeEvent":                             im.registerBeforeEvent(r),
 		"registerAfterEvent":                              im.registerAfterEvent(r),
 		"registerStorageIndex":                            im.registerStorageIndex(r),
@@ -359,8 +361,6 @@ func (im *RuntimeJavascriptInitModule) getConfig(r *goja.Runtime) func(goja.Func
 		_ = iapGoogleCfg.Set("client_email", rnc.GetIAP().GetGoogle().GetClientEmail())
 		_ = iapGoogleCfg.Set("private_key", rnc.GetIAP().GetGoogle().GetPrivateKey())
 		_ = iapGoogleCfg.Set("notifications_endpoint_id", rnc.GetIAP().GetGoogle().GetNotificationsEndpointId())
-		_ = iapGoogleCfg.Set("refund_check_period_min", rnc.GetIAP().GetGoogle().GetRefundCheckPeriodMin())
-		_ = iapGoogleCfg.Set("package_name", rnc.GetIAP().GetGoogle().GetPackageName())
 
 		iapHuaweiCfg := r.NewObject()
 		_ = iapHuaweiCfg.Set("public_key", rnc.GetIAP().GetHuawei().GetPublicKey())
@@ -488,7 +488,7 @@ func (im *RuntimeJavascriptInitModule) getRegisteredFnIdentifier(r *goja.Runtime
 						} else if modNameArg, ok := callExp.ArgumentList[1].(*ast.DotExpression); ok {
 							return string(modNameArg.Identifier.Name), nil
 						} else {
-							return "", inlinedFunctionError
+							return "", errInlinedFunction
 						}
 					}
 				}
@@ -1129,6 +1129,14 @@ func (im *RuntimeJavascriptInitModule) registerBeforeGetSubscription(r *goja.Run
 
 func (im *RuntimeJavascriptInitModule) registerAfterGetSubscription(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return im.registerHook(r, RuntimeExecutionModeAfter, "registerAfterGetSubscription", "getsubscription")
+}
+
+func (im *RuntimeJavascriptInitModule) registerBeforeListParties(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
+	return im.registerHook(r, RuntimeExecutionModeBefore, "registerBeforeListParties", "listparties")
+}
+
+func (im *RuntimeJavascriptInitModule) registerAfterListParties(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
+	return im.registerHook(r, RuntimeExecutionModeAfter, "registerAfterGetSubscription", "listparties")
 }
 
 func (im *RuntimeJavascriptInitModule) registerBeforeEvent(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
@@ -1866,7 +1874,7 @@ func (im *RuntimeJavascriptInitModule) getMatchHookFnIdentifier(r *goja.Runtime,
 										} else if id, ok := propKeyed.Value.(*ast.Identifier); ok {
 											return id.Name.String(), nil
 										} else {
-											return "", inlinedFunctionError
+											return "", errInlinedFunction
 										}
 									}
 								}

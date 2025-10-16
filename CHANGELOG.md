@@ -5,9 +5,60 @@ The format is based on [keep a changelog](http://keepachangelog.com) and this pr
 
 ## [Unreleased]
 
+## [3.32.0] - 2025-09-16
+### Changed
+- In-App Purchase runtime callback functions now handle other status changes besides refunds.
+- Update In-App Purchase validation internals to use Google Subscriptions v2 API.
+
+## [3.31.0] - 2025-09-02
+### Changed
+- Build with Go 1.25.0.
+
+### Fixed
+- Update Satori client types to match latest API spec.
+- Ensure Console UI loads correctly when served over non-SSL connections.
+- Fix match detail view in Console UI.
+
+### Added
+- Add API response field indicating if join is required for tournaments.
+
+## [3.30.0] - 2025-08-10
+### Added
+- Send In-App Notification for friend removal or friend request rejection.
+
+### Changed
+- Rebuilt console UI on Vue.js and the new Heroic UI components.
+
+## [3.29.0] - 2025-07-29
+### Added
+- New "MatchmakerProcessor" hook to set custom matching behaviour tapping into the complete ticket pool.
+
+### Changed
+- Update Satori client to latest API spec.
+- Process all Apple subscriptions in receipt latest_receipt_info and return the one with higher expiry time.
+
+### Fixed
+- Fix an issue where the leaderboard ranks were sometimes incorrectly calculated when fetching a previous page of records.
+
+## [3.28.0] - 2025-07-14
+### Added
+- Add party listing API and party labeling support.
+- Matchmaker entry create time is now available for custom runtime processing functions.
+
+### Changed
+- New Satori cache flag configuration parameter to require disabling by default.
+- Satori operations no longer carry an unnecessary session identifier.
+- Build with Go 1.24.5.
+
+### Fixed
+- Fix an issue where a purchased Google Subscription would not be looked up by the LinkedPurchaseToken field contained in a notification.
+- Improve Satori caching to prevent incorrect hits.
+- Update tournament size record deletion if it has a maximum size set.
+
 ## [3.27.1] - 2025-05-22
 ### Changed
 - Minor dependency updates.
+- Decorate request context in authentication after hooks.
 
 ## [3.27.0] - 2025-05-12
 ### Added

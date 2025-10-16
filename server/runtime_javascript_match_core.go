@@ -20,8 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"time"
+
+	"github.com/heroiclabs/nakama-common/runtime"
 
 	"github.com/dop251/goja"
 	"github.com/gofrs/uuid/v5"
@@ -32,7 +33,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-var matchStoppedError = errors.New("match stopped")
+var errMatchStopped = errors.New("match stopped")
 
 type RuntimeJavaScriptMatchCore struct {
 	logger        *zap.Logger
@@ -68,7 +69,7 @@ type RuntimeJavaScriptMatchCore struct {
 	ctxCancelFn context.CancelFunc
 }
 
-func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, satoriClient runtime.Satori, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node, version string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache, storageIndex StorageIndex) (RuntimeMatchCore, error) {
+func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, config Config, socialClient *social.Client, leaderboardCache LeaderboardCache, rankCache LeaderboardRankCache, localCache *RuntimeJavascriptLocalCache, leaderboardScheduler LeaderboardScheduler, sessionRegistry SessionRegistry, sessionCache SessionCache, statusRegistry StatusRegistry, matchRegistry MatchRegistry, partyRegistry PartyRegistry, tracker Tracker, metrics Metrics, streamManager StreamManager, router MessageRouter, satoriClient runtime.Satori, matchCreateFn RuntimeMatchCreateFunction, eventFn RuntimeEventCustomFunction, id uuid.UUID, node, version string, stopped *atomic.Bool, matchHandlers *jsMatchHandlers, modCache *RuntimeJSModuleCache, storageIndex StorageIndex) (RuntimeMatchCore, error) {
 	runtime := goja.New()
 
 	jsLoggerInst, err := NewJsLogger(runtime, logger)
@@ -76,7 +77,7 @@ func NewRuntimeJavascriptMatchCore(logger *zap.Logger, module string, db *sql.DB
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
 	}
 
-	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, storageIndex, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, satoriClient, eventFn, matchCreateFn)
+	nakamaModule := NewRuntimeJavascriptNakamaModule(logger, db, protojsonMarshaler, protojsonUnmarshaler, config, socialClient, leaderboardCache, rankCache, storageIndex, localCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, partyRegistry, tracker, metrics, streamManager, router, satoriClient, eventFn, matchCreateFn)
 	nk, err := nakamaModule.Constructor(runtime)
 	if err != nil {
 		logger.Fatal("Failed to initialize JavaScript runtime", zap.Error(err))
@@ -580,7 +581,7 @@ func (rm *RuntimeJavaScriptMatchCore) Cleanup() {}
 func (rm *RuntimeJavaScriptMatchCore) broadcastMessage(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return func(f goja.FunctionCall) goja.Value {
 		if rm.stopped.Load() {
-			panic(r.NewGoError(matchStoppedError))
+			panic(r.NewGoError(errMatchStopped))
 		}
 
 		presenceIDs, msg, reliable := rm.validateBroadcast(r, f)
@@ -595,7 +596,7 @@ func (rm *RuntimeJavaScriptMatchCore) broadcastMessage(r *goja.Runtime) func(goj
 func (rm *RuntimeJavaScriptMatchCore) broadcastMessageDeferred(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return func(f goja.FunctionCall) goja.Value {
 		if rm.stopped.Load() {
-			panic(r.NewGoError(matchStoppedError))
+			panic(r.NewGoError(errMatchStopped))
 		}
 
 		presenceIDs, msg, reliable := rm.validateBroadcast(r, f)
@@ -764,7 +765,7 @@ func (rm *RuntimeJavaScriptMatchCore) validateBroadcast(r *goja.Runtime, f goja.
 func (rm *RuntimeJavaScriptMatchCore) matchKick(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return func(f goja.FunctionCall) goja.Value {
 		if rm.stopped.Load() {
-			panic(r.NewGoError(matchStoppedError))
+			panic(r.NewGoError(errMatchStopped))
 		}
 
 		input := f.Argument(0)
@@ -830,7 +831,7 @@ func (rm *RuntimeJavaScriptMatchCore) matchKick(r *goja.Runtime) func(goja.Funct
 func (rm *RuntimeJavaScriptMatchCore) matchLabelUpdate(r *goja.Runtime) func(goja.FunctionCall) goja.Value {
 	return func(f goja.FunctionCall) goja.Value {
 		if rm.stopped.Load() {
-			panic(r.NewGoError(matchStoppedError))
+			panic(r.NewGoError(errMatchStopped))
 		}
 
 		input := getJsString(r, f.Argument(0))

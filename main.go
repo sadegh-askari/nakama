@@ -41,6 +41,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	_ "github.com/felixge/httpsnoop"
+	_ "github.com/golang/snappy"
 	_ "github.com/klauspost/compress"
 	_ "github.com/prometheus/client_golang/prometheus"
 	_ "github.com/prometheus/common/model"
@@ -186,7 +187,6 @@ func main() {
 	leaderboardCache := server.NewLocalLeaderboardCache(ctx, logger, startupLogger, db)
 	leaderboardRankCache := server.NewLocalLeaderboardRankCache(ctx, startupLogger, db, config.GetLeaderboard(), leaderboardCache)
 	leaderboardScheduler := server.NewLocalLeaderboardScheduler(logger, db, config, leaderboardCache, leaderboardRankCache)
-	googleRefundScheduler := server.NewGoogleRefundScheduler(logger, db, config)
 	matchRegistry := server.NewLocalMatchRegistry(logger, startupLogger, config, sessionRegistry, tracker, router, metrics, config.GetName())
 	tracker.SetMatchJoinListener(matchRegistry.Join)
 	tracker.SetMatchLeaveListener(matchRegistry.Leave)
@@ -197,12 +197,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to initialize storage index", zap.Error(err))
 	}
-	runtime, runtimeInfo, err := server.NewRuntime(ctx, logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, leaderboardCache, leaderboardRankCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, tracker, metrics, streamManager, router, storageIndex, fmCallbackHandler)
+	partyRegistry := server.NewLocalPartyRegistry(ctx, logger, startupLogger, config, config.GetName())
+	runtime, runtimeInfo, err := server.NewRuntime(ctx, logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, leaderboardCache, leaderboardRankCache, leaderboardScheduler, sessionRegistry, sessionCache, statusRegistry, matchRegistry, partyRegistry, tracker, metrics, streamManager, router, storageIndex, fmCallbackHandler)
 	if err != nil {
 		startupLogger.Fatal("Failed initializing runtime modules", zap.Error(err))
 	}
 	matchmaker := server.NewLocalMatchmaker(logger, startupLogger, config, router, metrics, runtime)
-	partyRegistry := server.NewLocalPartyRegistry(logger, config, matchmaker, tracker, streamManager, router, config.GetName())
+	partyRegistry.Init(matchmaker, tracker, streamManager, router)
 	tracker.SetPartyJoinListener(partyRegistry.Join)
 	tracker.SetPartyLeaveListener(partyRegistry.Leave)
 
@@ -214,16 +215,15 @@ func main() {
 	}()
 
 	leaderboardScheduler.Start(runtime)
-	googleRefundScheduler.Start(runtime)
 
 	pipeline := server.NewPipeline(logger, config, db, jsonpbMarshaler, jsonpbUnmarshaler, sessionRegistry, statusRegistry, matchRegistry, partyRegistry, matchmaker, tracker, router, runtime)
 	statusHandler := server.NewLocalStatusHandler(logger, sessionRegistry, matchRegistry, tracker, metrics, config.GetName())
 
-	telemetryEnabled := len(os.Getenv("NAKAMA_TELEMETRY")) < 1
+	telemetryEnabled := os.Getenv("NAKAMA_TELEMETRY") != "0"
 	console.UIFS.Nt = !telemetryEnabled
 	cookie := newOrLoadCookie(telemetryEnabled, config)
 
-	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, storageIndex, leaderboardCache, leaderboardRankCache, sessionRegistry, sessionCache, statusRegistry, matchRegistry, matchmaker, tracker, router, streamManager, metrics, pipeline, runtime)
+	apiServer := server.StartApiServer(logger, startupLogger, db, jsonpbMarshaler, jsonpbUnmarshaler, config, version, socialClient, storageIndex, leaderboardCache, leaderboardRankCache, sessionRegistry, sessionCache, statusRegistry, matchRegistry, partyRegistry, matchmaker, tracker, router, streamManager, metrics, pipeline, runtime)
 	consoleServer := server.StartConsoleServer(logger, startupLogger, db, config, tracker, router, streamManager, metrics, sessionRegistry, sessionCache, consoleSessionCache, loginAttemptCache, statusRegistry, statusHandler, runtimeInfo, matchRegistry, configWarnings, semver, leaderboardCache, leaderboardRankCache, leaderboardScheduler, storageIndex, apiServer, runtime, cookie)
 
 	if telemetryEnabled {
@@ -253,7 +253,6 @@ func main() {
 	consoleServer.Stop()
 	matchmaker.Stop()
 	leaderboardScheduler.Stop()
-	googleRefundScheduler.Stop()
 	tracker.Stop()
 	statusRegistry.Stop()
 	sessionCache.Stop()
