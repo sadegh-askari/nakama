@@ -106,8 +106,6 @@ github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 h1:8Tjv8EJ+pM1xP8mK6egEbD1OgnVTyacbefKhmbLhIhU=
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2/go.mod h1:pkJQ2tZHJ0aFOVEEot6oZmaVEZcRme73eIFmhiVuRWs=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/heroiclabs/nakama-common v1.42.0 h1:Y+WbJ35YuYfTRBxNcnSYk8EjuG5ZIF2aPaOmkBGPzpI=
-github.com/heroiclabs/nakama-common v1.42.0/go.mod h1:E4yiMQmn8KHQ77WqBLVUfazdiPnwFYWqUrfGOrqOXk8=
 github.com/heroiclabs/sql-migrate v0.0.0-20241125131053-95a7949783b0 h1:hHJcYOP6L2/wZIEnYjjkJM+rOk/bK0uaYkDAejYpLhI=
 github.com/heroiclabs/sql-migrate v0.0.0-20241125131053-95a7949783b0/go.mod h1:uwcmopkVQIfb/JQqul5zmGI9ounclRC08j9S9lLcpRQ=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
@@ -159,8 +157,8 @@ github.com/prometheus/procfs v0.17.0/go.mod h1:oPQLaDAMRbA+u8H5Pbfq+dl3VDAvHxMUO
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
-github.com/sadegh-askari/nakama-common v1.37.1-0.20250612094739-028b9ab3a7ba h1:3SfJK+F7RMqcSe0TPwyYP8ocOZ6PehEX/1w6evaWTP0=
-github.com/sadegh-askari/nakama-common v1.37.1-0.20250612094739-028b9ab3a7ba/go.mod h1:gpGzr0tineLtVeNuBNfN4lObWfalcXClXdH/LHV9IX0=
+github.com/sadegh-askari/nakama-common v1.42.1-0.20251016144752-a5e5f2334e5a h1:6ZuClP8N5V0SYotE20Brt5Blgcc31XjBclSI/VsD1Ms=
+github.com/sadegh-askari/nakama-common v1.42.1-0.20251016144752-a5e5f2334e5a/go.mod h1:E4yiMQmn8KHQ77WqBLVUfazdiPnwFYWqUrfGOrqOXk8=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/cast v1.3.0/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=

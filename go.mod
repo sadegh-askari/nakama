@@ -78,4 +78,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 )
 
-replace github.com/heroiclabs/nakama-common v1.37.0 => github.com/sadegh-askari/nakama-common v1.37.1-0.20250612094739-028b9ab3a7ba
+replace github.com/heroiclabs/nakama-common v1.42.0 => github.com/sadegh-askari/nakama-common v1.42.1-0.20251016144752-a5e5f2334e5a
