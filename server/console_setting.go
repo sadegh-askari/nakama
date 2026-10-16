@@ -17,8 +17,10 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 
 	"go.uber.org/zap"
 
@@ -29,7 +31,7 @@ import (
 )
 
 var (
-	allowedSettings    = []string{"utc_toggle"}
+	allowedSettings    = []string{"utc_toggle", "game_purchase_correction_message", "game_resource_grant_message"}
 	ErrSettingNotFound = status.Error(codes.NotFound, "Setting not found.")
 	ErrSettingInvalid  = status.Error(codes.InvalidArgument, "Setting is invalid.")
 )
@@ -50,6 +52,9 @@ func (s *ConsoleServer) GetSetting(ctx context.Context, in *console.SettingReque
 		}
 
 		if errors.Is(err, sql.ErrNoRows) {
+			if value, ok := gameNotificationSettingDefault(in.Name); ok {
+				return &console.Setting{Name: in.Name, Value: value}, nil
+			}
 			return nil, ErrSettingNotFound
 		}
 
@@ -70,9 +75,19 @@ func (s *ConsoleServer) UpdateSetting(ctx context.Context, in *console.UpdateSet
 		return nil, ErrSettingInvalid
 	}
 
+	if _, ok := gameNotificationSettingDefault(in.Name); ok {
+		var text string
+		if json.Unmarshal([]byte(in.Value), &text) != nil || strings.TrimSpace(text) == "" || len(text) > 8000 {
+			return nil, ErrSettingInvalid
+		}
+	}
+
 	var updateTime pgtype.Timestamptz
 
 	query := "UPDATE setting SET value = $2, update_time = now() WHERE name = $1 RETURNING update_time"
+	if _, ok := gameNotificationSettingDefault(in.Name); ok {
+		query = "INSERT INTO setting (name,value) VALUES ($1,$2::jsonb) ON CONFLICT (name) DO UPDATE SET value=excluded.value,update_time=now() RETURNING update_time"
+	}
 	params := []any{in.Name, in.Value}
 
 	if err := s.db.QueryRowContext(ctx, query, params...).Scan(&updateTime); err != nil {
@@ -134,5 +149,28 @@ func (s *ConsoleServer) ListSettings(ctx context.Context, in *console.ListSettin
 		return nil, status.Error(codes.Internal, "An error occurred while trying to read settings.")
 	}
 
+	for _, name := range []string{"game_purchase_correction_message", "game_resource_grant_message"} {
+		if len(in.Names) > 0 && !slices.Contains(in.Names, name) {
+			continue
+		}
+		if !slices.ContainsFunc(settings, func(setting *console.Setting) bool { return setting.Name == name }) {
+			value, _ := gameNotificationSettingDefault(name)
+			settings = append(settings, &console.Setting{Name: name, Value: value})
+		}
+	}
 	return &console.SettingList{Settings: settings}, nil
+}
+
+func gameNotificationSettingDefault(name string) (string, bool) {
+	var message string
+	switch name {
+	case "game_purchase_correction_message":
+		message = "A purchase correction has been issued to you."
+	case "game_resource_grant_message":
+		message = "Resources have been added to your account."
+	default:
+		return "", false
+	}
+	value, _ := json.Marshal(message)
+	return string(value), true
 }

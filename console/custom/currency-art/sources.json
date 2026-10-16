@@ -1,0 +1,1817 @@
+{
+  "AbilityModule1": {
+    "collection": "CurrencyCollection",
+    "file": "1d18af1ed2bf3d9d.png",
+    "source": "Assets/Sprites/UI/General/Currency/abiliti pop up-hat 1.png"
+  },
+  "AbilityModule2": {
+    "collection": "CurrencyCollection",
+    "file": "8d54ec4a735f0991.png",
+    "source": "Assets/Sprites/UI/General/Currency/abiliti pop up-hat 2.png"
+  },
+  "AbilityModule3": {
+    "collection": "CurrencyCollection",
+    "file": "54c3dec859b1bb47.png",
+    "source": "Assets/Sprites/UI/General/Currency/abiliti pop up-hat 3.png"
+  },
+  "AbilityModule4": {
+    "collection": "CurrencyCollection",
+    "file": "6c11f802abc176c3.png",
+    "source": "Assets/Sprites/UI/General/Currency/abiliti pop up-hat 4.png"
+  },
+  "AgilityConditioningGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "973af36b03540351.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Armor3.png"
+  },
+  "Aligator": {
+    "collection": "CharacterCollection",
+    "file": "d3fa4c9f01f05965.png",
+    "source": "Assets/Sprites/Characters/crocodile/battle page-card avatar-Crocodile.png"
+  },
+  "AligatorEx1": {
+    "collection": "CharacterCollection",
+    "file": "d3fa4c9f01f05965.png",
+    "source": "Assets/Sprites/Characters/crocodile/battle page-card avatar-Crocodile.png"
+  },
+  "AligatorEx1_Shard": {
+    "collection": "CharacterCollection",
+    "file": "d3fa4c9f01f05965.png",
+    "source": "Assets/Sprites/Characters/crocodile/battle page-card avatar-Crocodile.png"
+  },
+  "Aligator_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "d3fa4c9f01f05965.png",
+    "source": "Assets/Sprites/Characters/crocodile/battle page-card avatar-Crocodile.png"
+  },
+  "AnalyticSystemGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "337a4648ba4f5bc1.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Health2.png"
+  },
+  "ArcReactorGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6b33a782ae1916.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_IronMan.png"
+  },
+  "ArcReactorGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6b33a782ae1916.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_IronMan.png"
+  },
+  "ArcReactorGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6b33a782ae1916.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_IronMan.png"
+  },
+  "Arsam": {
+    "collection": "CharacterCollection",
+    "file": "21974e6280cfd24e.png",
+    "source": "Assets/Sprites/Characters/Arsam/battle page-card avatar-arsam.png"
+  },
+  "Arsam_Shard": {
+    "collection": "CharacterCollection",
+    "file": "21974e6280cfd24e.png",
+    "source": "Assets/Sprites/Characters/Arsam/battle page-card avatar-arsam.png"
+  },
+  "BalisticPlatingGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "934e9fd9a740365e.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Armor3.png"
+  },
+  "BasicCatalyst_Gear": {
+    "collection": "GearCollection",
+    "file": "1ffcd886f7c4a61c.png",
+    "source": "Assets/Sprites/Gear/gear/Basic_Cat.png"
+  },
+  "BetaCloths_Gear": {
+    "collection": "GearCollection",
+    "file": "f5e0ce91b4ddef67.png",
+    "source": "Assets/Sprites/Gear/gear/Armor_Cat_Green.png"
+  },
+  "BetaViroid_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "9b1db362df004632.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraTank_Taunt.png"
+  },
+  "BiogenicGlandGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "5f60c9777e2443d7.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Focus2.png"
+  },
+  "BionicHand_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "2c8673108c3cb03e.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Coulson.png"
+  },
+  "BionicHand_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "2c8673108c3cb03e.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Coulson.png"
+  },
+  "BionicHand_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "2c8673108c3cb03e.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Coulson.png"
+  },
+  "BlackMarketOrdananceGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "934605484b343281.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage2.png"
+  },
+  "BladedStrikesGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "c160e4a6fe8c678c.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Damage2.png"
+  },
+  "BlitzCharge": {
+    "collection": "CurrencyCollection",
+    "file": "866cebc24b2f668f.png",
+    "source": "Assets/Sprites/UI/General/Currency/BlitzCharge-currency.png"
+  },
+  "BloodSeekerShurikenGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "2b24fee2a39f3b7b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandControl_HealBlock.png"
+  },
+  "BloodSeekerShurikenGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "2b24fee2a39f3b7b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandControl_HealBlock.png"
+  },
+  "BloodSeekerShurikenGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "2b24fee2a39f3b7b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandControl_HealBlock.png"
+  },
+  "Bomb_lvl1_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "42e99afc144a0d3f.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/dinamit/DynamiteLvl1.png"
+  },
+  "Bomb_lvl2_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "32890c49c38b3a44.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/dinamit/DynamiteLvl2.png"
+  },
+  "Bomb_lvl3_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "6b46e858ba55f5c6.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/dinamit/DynamiteLvl3.png"
+  },
+  "Bomb_lvl4_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "ada628f317639afe.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/dinamit/DynamiteLvl4.png"
+  },
+  "BoneAugmentationGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "bd6d61e05ddcb40a.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Health2.png"
+  },
+  "Boss": {
+    "collection": "CharacterCollection",
+    "file": "c7290f416d421051.png",
+    "source": "Assets/Sprites/Characters/Boss/boss.png"
+  },
+  "Boss_Shard": {
+    "collection": "CharacterCollection",
+    "file": "c7290f416d421051.png",
+    "source": "Assets/Sprites/Characters/Boss/boss.png"
+  },
+  "CalfEX2": {
+    "collection": "CharacterCollection",
+    "file": "ac5bc8940bb1fa7e.png",
+    "source": "Assets/Sprites/Characters/calf/battle page-card avatar-calf.png"
+  },
+  "CalfEX2_Shard": {
+    "collection": "CharacterCollection",
+    "file": "ac5bc8940bb1fa7e.png",
+    "source": "Assets/Sprites/Characters/calf/battle page-card avatar-calf.png"
+  },
+  "CalfEX3": {
+    "collection": "CharacterCollection",
+    "file": "c85a1d774226475f.png",
+    "source": "Assets/Sprites/Characters/calf/battle page-card avatar-calf 2.png"
+  },
+  "CalfEX3_Shard": {
+    "collection": "CharacterCollection",
+    "file": "c85a1d774226475f.png",
+    "source": "Assets/Sprites/Characters/calf/battle page-card avatar-calf 2.png"
+  },
+  "CalsifiedMembraneGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "766ad0a41f47a54f.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Armor2.png"
+  },
+  "Campaign2_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "CampaignEnergy": {
+    "collection": "CurrencyCollection",
+    "file": "7aad2c13e5046356.png",
+    "source": "Assets/Sprites/UI/General/Currency/CampaignEnergy-currency.png"
+  },
+  "CampaignEnergyRefill": {
+    "collection": "CurrencyCollection",
+    "file": "ecce2c21721cfc05.png",
+    "source": "Assets/Sprites/UI/General/Currency/CampaignEnergyRefill-currency.png"
+  },
+  "CapShield_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "2bd86904bcf948ed.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_CaptainAmerica.png"
+  },
+  "CapShield_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "2bd86904bcf948ed.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_CaptainAmerica.png"
+  },
+  "CapShield_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "2bd86904bcf948ed.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_CaptainAmerica.png"
+  },
+  "Catayoon": {
+    "collection": "CharacterCollection",
+    "file": "eafbc088eccb7d23.png",
+    "source": "Assets/Sprites/Characters/Catayoon/battle page-card avatar-katayoon.png"
+  },
+  "Catayoon_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "eafbc088eccb7d23.png",
+    "source": "Assets/Sprites/Characters/Catayoon/battle page-card avatar-katayoon.png"
+  },
+  "CeramicPlatingGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "c576c745ce1e0f37.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Resist3.png"
+  },
+  "CerebralInterfaceGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "c576c745ce1e0f37.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Resist3.png"
+  },
+  "CerebralStimulandGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "5f60c9777e2443d7.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Focus2.png"
+  },
+  "Challenge1_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge2_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge_Ability_3_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge_BlitzCharge_5_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge_Gold_1_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge_Orb_4_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "Challenge_Training_2_Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "ClassifiedFiles_Gear": {
+    "collection": "GearCollection",
+    "file": "a4ad161ac9aaf414.png",
+    "source": "Assets/Sprites/Gear/gear/Skill_Mat.png"
+  },
+  "CloseCombatTactics_Gear": {
+    "collection": "GearCollection",
+    "file": "7be980457da53754.png",
+    "source": "Assets/Sprites/Gear/gear/Skill_Mat_b2.png"
+  },
+  "Coin": {
+    "collection": "CurrencyCollection",
+    "file": "7a306141ce2fe741.png",
+    "source": "Assets/Sprites/UI/HomePage_Old/general-coin-icon.png"
+  },
+  "ConfuseBomb_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "579014ea5505c99c.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/blue_256.png"
+  },
+  "Cow": {
+    "collection": "CharacterCollection",
+    "file": "497c24e227e56c44.png",
+    "source": "Assets/Sprites/Characters/cow/battle page-card avatar-cow.png"
+  },
+  "Cow_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "497c24e227e56c44.png",
+    "source": "Assets/Sprites/Characters/cow/battle page-card avatar-cow.png"
+  },
+  "CranialInterfaceGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "b9d3d29f536618d8.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Resist2.png"
+  },
+  "CrystalGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "2b24fee2a39f3b7b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandControl_HealBlock.png"
+  },
+  "CurativeCharmGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "4d5147defab992d4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Health3.png"
+  },
+  "CursedNinjasuGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "353099a37a0e8549.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandDmg_Bonus.png"
+  },
+  "CursedNinjasuGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "353099a37a0e8549.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandDmg_Bonus.png"
+  },
+  "CursedNinjasuGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "353099a37a0e8549.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandDmg_Bonus.png"
+  },
+  "CyberneticArmGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "c0228e518cc49d91.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_WinterSoldier.png"
+  },
+  "CyberneticArmGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "c0228e518cc49d91.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_WinterSoldier.png"
+  },
+  "CyberneticArm_Gear": {
+    "collection": "GearCollection",
+    "file": "c0228e518cc49d91.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_WinterSoldier.png"
+  },
+  "DNA_Gear": {
+    "collection": "GearCollection",
+    "file": "5aadd7255d417343.png",
+    "source": "Assets/Sprites/Gear/gear/Bio_Mat.png"
+  },
+  "DamageOpponentsCheat_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "db5bc2d6bf9c04e1.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/RED_256.png"
+  },
+  "DamageOpponentsS_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "db5bc2d6bf9c04e1.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/RED_256.png"
+  },
+  "DamageOpponents_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "db5bc2d6bf9c04e1.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/RED_256.png"
+  },
+  "DarkWatchShieldGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "332aa4539e490f0a.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercTank_Debuff.png"
+  },
+  "DarkWatchShieldGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "332aa4539e490f0a.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercTank_Debuff.png"
+  },
+  "DarkWatchShieldGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "332aa4539e490f0a.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercTank_Debuff.png"
+  },
+  "DarkwatchAssaultRifleGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchAssaultRifleGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchAssaultRifleGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchCommGearGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchCommGearGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchCommGearGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "DarkwatchLongRifleGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "fb1949b252e45a82.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercDmg_Single.png"
+  },
+  "DarkwatchLongRifleGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "fb1949b252e45a82.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercDmg_Single.png"
+  },
+  "DarkwatchLongRifleGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "fb1949b252e45a82.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercDmg_Single.png"
+  },
+  "DecryptionTechniqueGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "0865c3515cbd27f7.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Focus2.png"
+  },
+  "DestructiveStrikesGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "2c5372d8b3a4dffa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Damage3.png"
+  },
+  "Dog": {
+    "collection": "CharacterCollection",
+    "file": "2c653b6e0fca7d7f.png",
+    "source": "Assets/Sprites/Characters/dog/battle page-card avatar-dog.png"
+  },
+  "Dog_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "2c653b6e0fca7d7f.png",
+    "source": "Assets/Sprites/Characters/dog/battle page-card avatar-dog.png"
+  },
+  "DustofDeath_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "eb783d1a0042e5fa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_RedSkull.png"
+  },
+  "DustofDeath_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "eb783d1a0042e5fa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_RedSkull.png"
+  },
+  "DustofDeath_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "eb783d1a0042e5fa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_RedSkull.png"
+  },
+  "ElektraSaisGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "368eb1d36ad67211.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage1.png"
+  },
+  "ElektraSaisGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "368eb1d36ad67211.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage1.png"
+  },
+  "ElektraSaisGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "368eb1d36ad67211.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage1.png"
+  },
+  "EnergizedAntigen_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "1c8c595e60667dde.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mutant_Resist2.png"
+  },
+  "Eskandar": {
+    "collection": "CharacterCollection",
+    "file": "635b833739893510.png",
+    "source": "Assets/Sprites/Characters/Eskandar/battle page-card avatar-Eskandar.png"
+  },
+  "Eskandar_Shard": {
+    "collection": "CharacterCollection",
+    "file": "635b833739893510.png",
+    "source": "Assets/Sprites/Characters/Eskandar/battle page-card avatar-Eskandar.png"
+  },
+  "EtheralWardGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "4de67aa09947d2b0.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Armor3.png"
+  },
+  "EvasiveManuevers_Gear": {
+    "collection": "GearCollection",
+    "file": "4a7f2e99afa5c489.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Armor2.png"
+  },
+  "ExplosiveOrdnanceGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "4f9a5bc1a84c97cd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage3.png"
+  },
+  "F0_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "971d969042fd6f2b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 0.png"
+  },
+  "F10_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "ac4a080999ade3ad.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 10.png"
+  },
+  "F11_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "3a61e0632403af37.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 11.png"
+  },
+  "F12_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "e1180559f56d325b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 12.png"
+  },
+  "F13_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "4d6eb71634aa3732.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 13.png"
+  },
+  "F14_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "ff9d42647b249e02.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 14.png"
+  },
+  "F15_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "5a75f3f64c1719c4.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 15.png"
+  },
+  "F16_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "b52ef225ca84e3de.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 16.png"
+  },
+  "F17_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "b37f88410365a747.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 17.png"
+  },
+  "F18_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "5d6d38283ce7f11c.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 18.png"
+  },
+  "F19_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "c2ac3cfe88d9a7dd.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 19.png"
+  },
+  "F1_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "c105f639121f5e0b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 1.png"
+  },
+  "F20_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "cc4cb06c4057f609.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 20.png"
+  },
+  "F21_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "e0da49e1ebbb1b2c.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 21.png"
+  },
+  "F22_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "b8709c366a63dd0a.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 22.png"
+  },
+  "F23_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "8976a8e9797160fa.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 23.png"
+  },
+  "F24_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "67d9dd0173190fda.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 24.png"
+  },
+  "F25_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "cca2d8907e071ce1.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 25.png"
+  },
+  "F26_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "5b3ceb7a3d3a0878.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 26.png"
+  },
+  "F27_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "9a5ac032e2146f80.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 27.png"
+  },
+  "F28_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "f2a18541c6be9e6f.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 28.png"
+  },
+  "F29_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "835168200c5c2bb4.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 29.png"
+  },
+  "F2_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "d0298a4879a9c766.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 2.png"
+  },
+  "F30_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "b23237a0e601e984.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 30.png"
+  },
+  "F31_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "bcd532a67ef067dc.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 31.png"
+  },
+  "F32_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "70629ee2eaacb897.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 32.png"
+  },
+  "F33_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "64d694f9dd4acc87.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 33.png"
+  },
+  "F34_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "75d2fb0cab589888.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 34.png"
+  },
+  "F35_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "73dfa9d703847234.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 35.png"
+  },
+  "F36_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "1d80650006f595d2.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 36.png"
+  },
+  "F37_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "9c5e26c342c9d725.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 37.png"
+  },
+  "F38_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "1ea0d53c6303f3e1.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 38.png"
+  },
+  "F39_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "477f26fee5901b09.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 39.png"
+  },
+  "F3_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "e56e3b59f0bb8b61.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 3.png"
+  },
+  "F40_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "b6c0ee7ba3bcda2b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 40.png"
+  },
+  "F41_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "8c1a1991cd4d8018.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 41.png"
+  },
+  "F42_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "7757b4fdd7934631.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 42.png"
+  },
+  "F43_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "1667db9b28c5b0a7.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 43.png"
+  },
+  "F44_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "53062597ef61ec2b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 44.png"
+  },
+  "F45_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "75808d18d4b43818.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 45.png"
+  },
+  "F46_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "d36a17cc78918a6c.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 46.png"
+  },
+  "F47_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "f691f83d4739e4bb.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 47.png"
+  },
+  "F48_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "ba5abbf67a03cbe1.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 48.png"
+  },
+  "F49_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "e1c8267a69f8a306.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 49.png"
+  },
+  "F4_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "47125822c81cafc5.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 4.png"
+  },
+  "F50_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "eb94755f9458ef79.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 50.png"
+  },
+  "F51_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "112184e53224a883.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 51.png"
+  },
+  "F52_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "afd05923c2c6619b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 52.png"
+  },
+  "F53_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "9b40e159970d34c2.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 53.png"
+  },
+  "F54_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "e022ca6132e7ce33.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 54.png"
+  },
+  "F5_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "290586f75f3a5e63.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 5.png"
+  },
+  "F6_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "1db083cf3a6a028a.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 6.png"
+  },
+  "F7_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "25db0c35a91f8a4b.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 7.png"
+  },
+  "F8_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "fc0c71f39d8943f9.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 8.png"
+  },
+  "F9_frame": {
+    "collection": "AvatarAssetCollection",
+    "file": "3d348567c1853493.png",
+    "source": "Assets/Sprites/UI/Profile/AvatarFrame/avatar frame 9.png"
+  },
+  "FaustusKit_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "2d023dff52bc0e4f.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraSupport_Heal.png"
+  },
+  "FaustusKit_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "2d023dff52bc0e4f.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraSupport_Heal.png"
+  },
+  "FaustusKit_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "2d023dff52bc0e4f.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraSupport_Heal.png"
+  },
+  "Feryooz": {
+    "collection": "CharacterCollection",
+    "file": "15ed29fa2d4998f5.png",
+    "source": "Assets/Sprites/Characters/Feryooz/battle page-card avatar-Feryooz.png"
+  },
+  "Feryooz_Shard": {
+    "collection": "CharacterCollection",
+    "file": "15ed29fa2d4998f5.png",
+    "source": "Assets/Sprites/Characters/Feryooz/battle page-card avatar-Feryooz.png"
+  },
+  "FistPistonsGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "10ecf33e46e64177.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Crossbones.png"
+  },
+  "FistPistonsGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "10ecf33e46e64177.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Crossbones.png"
+  },
+  "FistPistonsGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "10ecf33e46e64177.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Crossbones.png"
+  },
+  "FitnessRegimanGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "d132b6ec1a123d33.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Health2.png"
+  },
+  "Flashbang_lvl1_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "78cd3c94c5266fb9.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/flashbang/FlashbangLvl1.png"
+  },
+  "Flashbang_lvl2_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "39ed0c1f0e5f664d.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/flashbang/FlashbangLvl2.png"
+  },
+  "Flashbang_lvl3_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "b2374f9905ab5f80.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/flashbang/FlashbangLvl3.png"
+  },
+  "Flashbang_lvl4_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "2d03c4f50c660252.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/flashbang/FlashbangLvl4.png"
+  },
+  "Fox": {
+    "collection": "CharacterCollection",
+    "file": "b899a38dff1df3f8.png",
+    "source": "Assets/Sprites/Characters/Fox/battle page-card avatar-fox.png"
+  },
+  "Fox_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "b899a38dff1df3f8.png",
+    "source": "Assets/Sprites/Characters/Fox/battle page-card avatar-fox.png"
+  },
+  "Goat": {
+    "collection": "CharacterCollection",
+    "file": "2d0a29098ab464a4.png",
+    "source": "Assets/Sprites/Characters/goat/battle page-card avatar-goat.png"
+  },
+  "GoatBot": {
+    "collection": "CharacterCollection",
+    "file": "ee79086f8096c8df.png",
+    "source": "Assets/Sprites/Characters/goat/battle page-card avatar-goat 2.png"
+  },
+  "GoatBot_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "ee79086f8096c8df.png",
+    "source": "Assets/Sprites/Characters/goat/battle page-card avatar-goat 2.png"
+  },
+  "Goat_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "2d0a29098ab464a4.png",
+    "source": "Assets/Sprites/Characters/goat/battle page-card avatar-goat.png"
+  },
+  "GripStrenghFormulaGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "46b497507387ed45.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Damage3.png"
+  },
+  "HealCharacters_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "249237136f6ed90e.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/green_256.png"
+  },
+  "HeartAugmentationGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "9b9d7d18713167e8.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Health3.png"
+  },
+  "HermeticSuit_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "99f0b4d05499f9be.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mutant_Armor1.png"
+  },
+  "HulkAlteredGenomeGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "b6ae893f4e560a8c.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Hulk.png"
+  },
+  "HulkAlteredGenomegreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "b6ae893f4e560a8c.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Hulk.png"
+  },
+  "HulkAlteredGenomegreen_Gear": {
+    "collection": "GearCollection",
+    "file": "b6ae893f4e560a8c.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Hulk.png"
+  },
+  "HydraScaleArmor_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "9b1db362df004632.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraTank_Taunt.png"
+  },
+  "HydraScaleArmor_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "9b1db362df004632.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraTank_Taunt.png"
+  },
+  "HydraScaleArmor_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "9b1db362df004632.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraTank_Taunt.png"
+  },
+  "Ibis": {
+    "collection": "CharacterCollection",
+    "file": "85521f2ec5de49ad.png",
+    "source": "Assets/Sprites/Characters/Ibis-dorna/battle page-card avatar-dorna.png"
+  },
+  "IbisEx1": {
+    "collection": "CharacterCollection",
+    "file": "5c95f5306cff07d7.png",
+    "source": "Assets/Sprites/Characters/Ibis-dorna/battle page-card avatar-dorna 2.png"
+  },
+  "IbisEx1_Shard": {
+    "collection": "CharacterCollection",
+    "file": "5c95f5306cff07d7.png",
+    "source": "Assets/Sprites/Characters/Ibis-dorna/battle page-card avatar-dorna 2.png"
+  },
+  "Ibis_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "85521f2ec5de49ad.png",
+    "source": "Assets/Sprites/Characters/Ibis-dorna/battle page-card avatar-dorna.png"
+  },
+  "IcerPistol_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "1242afe084473720.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Stealth.png"
+  },
+  "IcerPistol_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "1242afe084473720.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Stealth.png"
+  },
+  "IcerPistol_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "1242afe084473720.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Stealth.png"
+  },
+  "IcerRifle_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "a2cf3ed079692f08.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_Defense.png"
+  },
+  "IcerRifle_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "a2cf3ed079692f08.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_Defense.png"
+  },
+  "IcerRifle_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "a2cf3ed079692f08.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_Defense.png"
+  },
+  "ImmunalGlandGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "f7e8b937aa334169.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Resist2.png"
+  },
+  "ImprovedCyberneticArmBlue_Gear": {
+    "collection": "GearCollection",
+    "file": "c0228e518cc49d91.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_WinterSoldier.png"
+  },
+  "ImprovedDamageCatalystPart_Gear": {
+    "collection": "GearCollection",
+    "file": "d96b79fd8cf6c641.png",
+    "source": "Assets/Sprites/Gear/gear/Damage_Bit.png"
+  },
+  "ImprovedPolymer_Gear": {
+    "collection": "GearCollection",
+    "file": "aeb6f91e9ddec90f.png",
+    "source": "Assets/Sprites/Gear/gear/Tech_Mat.png"
+  },
+  "ImprovedTechArmorCatalystPart_Gear": {
+    "collection": "GearCollection",
+    "file": "b16fee60f90c670a.png",
+    "source": "Assets/Sprites/Gear/gear/Armor_Cat_Bit.png"
+  },
+  "ImprovedTechArmorCatalyst_Gear": {
+    "collection": "GearCollection",
+    "file": "616b33a2eecdee53.png",
+    "source": "Assets/Sprites/Gear/gear/Damage_Cat.png"
+  },
+  "ImprovedTechDamageCatalyst_Gear": {
+    "collection": "GearCollection",
+    "file": "616b33a2eecdee53.png",
+    "source": "Assets/Sprites/Gear/gear/Damage_Cat.png"
+  },
+  "ImprovedUnstableMolicules_Gear": {
+    "collection": "GearCollection",
+    "file": "6f422fae6b5f7cdb.png",
+    "source": "Assets/Sprites/Gear/gear/Tech_Mat_Bit.png"
+  },
+  "InfinityFormula_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "2094bac136f02683.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_NickFury.png"
+  },
+  "InfinityFormula_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "2094bac136f02683.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_NickFury.png"
+  },
+  "InfinityFormula_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "2094bac136f02683.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_NickFury.png"
+  },
+  "IonizedMembrane1_Gear": {
+    "collection": "GearCollection",
+    "file": "766ad0a41f47a54f.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Armor2.png"
+  },
+  "Jamar": {
+    "collection": "CharacterCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "Jamar_Shard": {
+    "collection": "CharacterCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "Jarvis_Orb": {
+    "collection": "CurrencyCollection",
+    "file": "f2fcafc82ab4052e.png",
+    "source": "Assets/Sprites/UI/orb chamber/orb3.png"
+  },
+  "Jetpack_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "f57b9925e456b0bf.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_AoE.png"
+  },
+  "Jetpack_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "f57b9925e456b0bf.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_AoE.png"
+  },
+  "Jetpack_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "f57b9925e456b0bf.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldDmg_AoE.png"
+  },
+  "Kamran": {
+    "collection": "CharacterCollection",
+    "file": "5745f9fa86fe183d.png",
+    "source": "Assets/Sprites/Characters/Kamran-Karim/battle page-card avatar-kamran.png"
+  },
+  "Kamran_Shard": {
+    "collection": "CharacterCollection",
+    "file": "5745f9fa86fe183d.png",
+    "source": "Assets/Sprites/Characters/Kamran-Karim/battle page-card avatar-kamran.png"
+  },
+  "Karim": {
+    "collection": "CharacterCollection",
+    "file": "1dfed890ec01b2a9.png",
+    "source": "Assets/Sprites/Characters/Kamran-Karim/battle page-card avatar-karim.png"
+  },
+  "Karim_Shard": {
+    "collection": "CharacterCollection",
+    "file": "1dfed890ec01b2a9.png",
+    "source": "Assets/Sprites/Characters/Kamran-Karim/battle page-card avatar-karim.png"
+  },
+  "Kharaki1_Gear": {
+    "collection": "GearCollection",
+    "file": "4f9a5bc1a84c97cd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage3.png"
+  },
+  "Kharaki2_Gear": {
+    "collection": "GearCollection",
+    "file": "4f9a5bc1a84c97cd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage3.png"
+  },
+  "Kharaki3_Gear": {
+    "collection": "GearCollection",
+    "file": "4f9a5bc1a84c97cd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage3.png"
+  },
+  "Kharaki4_Gear": {
+    "collection": "GearCollection",
+    "file": "4f9a5bc1a84c97cd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Damage3.png"
+  },
+  "KingPinCraneGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "1cf7ac2f2210d676.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Kingpin.png"
+  },
+  "KingPinCraneGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "1cf7ac2f2210d676.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Kingpin.png"
+  },
+  "KingPinCraneGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "1cf7ac2f2210d676.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Kingpin.png"
+  },
+  "LaserScopeGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "c8e54871211fb079.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Focus2.png"
+  },
+  "LegStrenghFormulaGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "7c2bddced766c5b4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Damage2.png"
+  },
+  "Level": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "LukeCageGreem_Gear": {
+    "collection": "GearCollection",
+    "file": "14305f9e52b37c54.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_LukeCage.png"
+  },
+  "LukeCageGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "14305f9e52b37c54.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_LukeCage.png"
+  },
+  "LukeCageGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "14305f9e52b37c54.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_LukeCage.png"
+  },
+  "MarkofDestructionGear2_Gear": {
+    "collection": "GearCollection",
+    "file": "d343f882810d11e7.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage3.png"
+  },
+  "MarkofPowerGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "12dcec3b17ca0b49.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage2.png"
+  },
+  "Mehrad": {
+    "collection": "CharacterCollection",
+    "file": "e8147b573e7a5f62.png",
+    "source": "Assets/Sprites/Characters/Mehrad/battle page-card avatar-mehrad.png"
+  },
+  "Mehrad_Shard": {
+    "collection": "CharacterCollection",
+    "file": "e8147b573e7a5f62.png",
+    "source": "Assets/Sprites/Characters/Mehrad/battle page-card avatar-mehrad.png"
+  },
+  "MetaphysicalTalismanGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "c6b533cf85361950.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Focus1.png"
+  },
+  "Musashi": {
+    "collection": "CharacterCollection",
+    "file": "0536c980dc61c338.png",
+    "source": "Assets/Sprites/Characters/Musashi/battle page-card avatar-musashi.png"
+  },
+  "Musashi_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "0536c980dc61c338.png",
+    "source": "Assets/Sprites/Characters/Musashi/battle page-card avatar-musashi.png"
+  },
+  "Nader": {
+    "collection": "CharacterCollection",
+    "file": "cf5c11e29a7488ca.png",
+    "source": "Assets/Sprites/Characters/Nader/battle page-card avatar-nader.png"
+  },
+  "Nader_Shard": {
+    "collection": "CharacterCollection",
+    "file": "cf5c11e29a7488ca.png",
+    "source": "Assets/Sprites/Characters/Nader/battle page-card avatar-nader.png"
+  },
+  "Nadim": {
+    "collection": "CharacterCollection",
+    "file": "0d2cafa7ebc893fe.png",
+    "source": "Assets/Sprites/Characters/Nadim/battle page-card avatar-nadim.png"
+  },
+  "Nadim_Shard": {
+    "collection": "CharacterCollection",
+    "file": "0d2cafa7ebc893fe.png",
+    "source": "Assets/Sprites/Characters/Nadim/battle page-card avatar-nadim.png"
+  },
+  "NanibionicSystemsGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "33a76f89d864d991.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Health3.png"
+  },
+  "Navid": {
+    "collection": "CharacterCollection",
+    "file": "a29ff77d7fda10f0.png",
+    "source": "Assets/Sprites/Characters/Navid/battle page-card avatar-navid.png"
+  },
+  "Navid_Shard": {
+    "collection": "CharacterCollection",
+    "file": "a29ff77d7fda10f0.png",
+    "source": "Assets/Sprites/Characters/Navid/battle page-card avatar-navid.png"
+  },
+  "NaziKuala": {
+    "collection": "CharacterCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "NaziKuala_Shard": {
+    "collection": "CharacterCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "Nika": {
+    "collection": "CharacterCollection",
+    "file": "aa976bfe4a68011b.png",
+    "source": "Assets/Sprites/Characters/Nika-Niksan/battle page-card avatar-nika.png"
+  },
+  "Nika_Shard": {
+    "collection": "CharacterCollection",
+    "file": "aa976bfe4a68011b.png",
+    "source": "Assets/Sprites/Characters/Nika-Niksan/battle page-card avatar-nika.png"
+  },
+  "Niksan": {
+    "collection": "CharacterCollection",
+    "file": "5a84fea17b210f87.png",
+    "source": "Assets/Sprites/Characters/Nika-Niksan/battle page-card avatar-niksan.png"
+  },
+  "Niksan_Shard": {
+    "collection": "CharacterCollection",
+    "file": "5a84fea17b210f87.png",
+    "source": "Assets/Sprites/Characters/Nika-Niksan/battle page-card avatar-niksan.png"
+  },
+  "NinjaScrollGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "a64e307127e09603.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandSupport_Heal.png"
+  },
+  "NinjaScrollGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "a64e307127e09603.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandSupport_Heal.png"
+  },
+  "NinjaScrollGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "a64e307127e09603.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandSupport_Heal.png"
+  },
+  "NobuKatanaGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "5946d98f1eeca516.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Nobu.png"
+  },
+  "NobuKatanaGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "5946d98f1eeca516.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Nobu.png"
+  },
+  "NobuKatanaGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "5946d98f1eeca516.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Nobu.png"
+  },
+  "Onagar": {
+    "collection": "CharacterCollection",
+    "file": "e339f70bc969497b.png",
+    "source": "Assets/Sprites/Characters/Onagar/battle page-card avatar-bahram.png"
+  },
+  "Onagar_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "e339f70bc969497b.png",
+    "source": "Assets/Sprites/Characters/Onagar/battle page-card avatar-bahram.png"
+  },
+  "OvisEX3": {
+    "collection": "CharacterCollection",
+    "file": "47d1d13d824aa795.png",
+    "source": "Assets/Sprites/Characters/ovis-ram/battle page-card avatar-ram.png"
+  },
+  "OvisEX3_Shard": {
+    "collection": "CharacterCollection",
+    "file": "47d1d13d824aa795.png",
+    "source": "Assets/Sprites/Characters/ovis-ram/battle page-card avatar-ram.png"
+  },
+  "OvisEX4": {
+    "collection": "CharacterCollection",
+    "file": "47d1d13d824aa795.png",
+    "source": "Assets/Sprites/Characters/ovis-ram/battle page-card avatar-ram.png"
+  },
+  "OvisEX4_Shard": {
+    "collection": "CharacterCollection",
+    "file": "47d1d13d824aa795.png",
+    "source": "Assets/Sprites/Characters/ovis-ram/battle page-card avatar-ram.png"
+  },
+  "PachinkoToken": {
+    "collection": "PachinkoTokenReward",
+    "file": "ee5333e38337971d.png",
+    "source": "Assets/Sprites/UI/General_old/slot machine-currency.png"
+  },
+  "Parchment_Gear": {
+    "collection": "GearCollection",
+    "file": "c6b533cf85361950.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Focus1.png"
+  },
+  "Parviz": {
+    "collection": "CharacterCollection",
+    "file": "b6c09580d4cfbc0d.png",
+    "source": "Assets/Sprites/Characters/Parviz/battle page-card avatar-parviz.png"
+  },
+  "Parviz_Shard": {
+    "collection": "CharacterCollection",
+    "file": "b6c09580d4cfbc0d.png",
+    "source": "Assets/Sprites/Characters/Parviz/battle page-card avatar-parviz.png"
+  },
+  "Piggy": {
+    "collection": "CharacterCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "Piggy_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "9e0651fd1e5041f1.png",
+    "source": "Assets/Sprites/Characters/Pig/battle page-card avatar-pig.png"
+  },
+  "PolyFiber_Gear": {
+    "collection": "GearCollection",
+    "file": "2c802b158d1983c4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_NoArmor.png"
+  },
+  "Polymer_Gear": {
+    "collection": "GearCollection",
+    "file": "aeb6f91e9ddec90f.png",
+    "source": "Assets/Sprites/Gear/gear/Tech_Mat.png"
+  },
+  "PowerCore": {
+    "collection": "CurrencyCollection",
+    "file": "4c8d39c3c9786dc1.png",
+    "source": "Assets/Sprites/UI/General/Currency/general-PowerCore-icon.png"
+  },
+  "PrecisionTechniqueGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "41d6e8739fe7df77.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Focus3.png"
+  },
+  "ProtectiveManeuverGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "5362477971070284.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_MercSupport_Buffs.png"
+  },
+  "PunisherVestGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "7469c4681d2d62c0.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Punisher.png"
+  },
+  "PunisherVestGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "7469c4681d2d62c0.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Punisher.png"
+  },
+  "PunisherVestGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "7469c4681d2d62c0.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Punisher.png"
+  },
+  "Rabbit": {
+    "collection": "CharacterCollection",
+    "file": "c7290f416d421051.png",
+    "source": "Assets/Sprites/Characters/Boss/boss.png"
+  },
+  "Rabbit_Shard": {
+    "collection": "CharacterCollection",
+    "file": "c7290f416d421051.png",
+    "source": "Assets/Sprites/Characters/Boss/boss.png"
+  },
+  "ResilientNeurons_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "75e311127510fd0e.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mutant_Focus2.png"
+  },
+  "RessilienceConditioningGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "904a761c94ad9e96.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Resist2.png"
+  },
+  "SealofContentionGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "f67034bb4ec53a25.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Resist1.png"
+  },
+  "SealofFortituteGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "368eb1d36ad67211.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Damage1.png"
+  },
+  "SecureComlink_Gear": {
+    "collection": "GearCollection",
+    "file": "7ae834d610a05e1d.png",
+    "source": "Assets/Sprites/Gear/gear/Resist_Cat_Green.png"
+  },
+  "SecurityClearance_Gear": {
+    "collection": "GearCollection",
+    "file": "3b8dd2805794cf62.png",
+    "source": "Assets/Sprites/Gear/gear/Focus_Cat_Green.png"
+  },
+  "Serum612_Gear": {
+    "collection": "GearCollection",
+    "file": "60b49163a602217c.png",
+    "source": "Assets/Sprites/Gear/gear/Bio_Mat_b3.png"
+  },
+  "ShadowBombGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "36cf512773513cfa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandTank_Stealth.png"
+  },
+  "ShadowBombGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "36cf512773513cfa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandTank_Stealth.png"
+  },
+  "ShadowBombGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "36cf512773513cfa.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HandTank_Stealth.png"
+  },
+  "Shahin": {
+    "collection": "CharacterCollection",
+    "file": "a909f6ecbe44b90f.png",
+    "source": "Assets/Sprites/Characters/Shahin/battle page-card avatar-shahin.png"
+  },
+  "Shahin_Shard": {
+    "collection": "CharacterCollection",
+    "file": "a909f6ecbe44b90f.png",
+    "source": "Assets/Sprites/Characters/Shahin/battle page-card avatar-shahin.png"
+  },
+  "Shahrooz": {
+    "collection": "CharacterCollection",
+    "file": "2eed992f5244bd34.png",
+    "source": "Assets/Sprites/Characters/Shahruz/battle page-card avatar-shahruz.png"
+  },
+  "Shahrooz_Shard": {
+    "collection": "CharacterCollection",
+    "file": "2eed992f5244bd34.png",
+    "source": "Assets/Sprites/Characters/Shahruz/battle page-card avatar-shahruz.png"
+  },
+  "Sheep": {
+    "collection": "CharacterCollection",
+    "file": "027c3b35c98a02be.png",
+    "source": "Assets/Sprites/Characters/sheep/battle page-card avatar-sheep.png"
+  },
+  "Sheep_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "027c3b35c98a02be.png",
+    "source": "Assets/Sprites/Characters/sheep/battle page-card avatar-sheep.png"
+  },
+  "ShieldBarrier_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "6dae3b3323c6edde.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldTank_Stun.png"
+  },
+  "ShieldBarrier_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "6dae3b3323c6edde.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldTank_Stun.png"
+  },
+  "ShieldBarrier_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "6dae3b3323c6edde.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldTank_Stun.png"
+  },
+  "ShieldMedicKitGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "4e2661e30e38b8f9.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Heal.png"
+  },
+  "ShieldMedicKitGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "4e2661e30e38b8f9.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Heal.png"
+  },
+  "ShieldMedicKit_Gear": {
+    "collection": "GearCollection",
+    "file": "4e2661e30e38b8f9.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_ShieldSupport_Heal.png"
+  },
+  "ShopCredit": {
+    "collection": "CurrencyCollection",
+    "file": "fcbfb27853d11ca0.png",
+    "source": "Assets/Sprites/UI/General/Currency/ShopCredit.png"
+  },
+  "ShrapnelBomb_lvl1_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "003def983885c73d.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/tarksh/ShrapnelLvl1.png"
+  },
+  "ShrapnelBomb_lvl2_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "d682a500b0b9e4ce.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/tarksh/ShrapnelLvl2.png"
+  },
+  "ShrapnelBomb_lvl3_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "25d1725ed25130a0.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/tarksh/ShrapnelLvl3.png"
+  },
+  "SiliconeMatrix_Gear": {
+    "collection": "GearCollection",
+    "file": "c576c745ce1e0f37.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Resist3.png"
+  },
+  "Sina": {
+    "collection": "CharacterCollection",
+    "file": "dca5ff82dbbabfaa.png",
+    "source": "Assets/Sprites/Characters/Sina/battle page-card avatar-sina.png"
+  },
+  "Sina_Shard": {
+    "collection": "CharacterCollection",
+    "file": "dca5ff82dbbabfaa.png",
+    "source": "Assets/Sprites/Characters/Sina/battle page-card avatar-sina.png"
+  },
+  "SmokeBomb_lvl1_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "f7423ee25c43fad0.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/smok/SmokeLvl1.png"
+  },
+  "SmokeBomb_lvl2_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "f75b66ad8a3724ce.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/smok/SmokeLvl2.png"
+  },
+  "SmokeBomb_lvl3_Elixir": {
+    "collection": "CurrencyCollection",
+    "file": "ca6ae145e033cd26.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/smok/SmokeLvl3.png"
+  },
+  "SmokeBomb_lvl4_Elixir": {
+    "collection": "ElixirCollection",
+    "file": "3a0806db8b411a2e.png",
+    "source": "Assets/Sprites/UI/Elixir/New Elixir Images/smok/SmokeLvl4.png"
+  },
+  "SoulSword_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "cf4c95daad5849d5.png",
+    "source": "Assets/Sprites/Gear/ICON_GEAR_T1_MAGIK_f7022ec3.png"
+  },
+  "SoulSword_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "cf4c95daad5849d5.png",
+    "source": "Assets/Sprites/Gear/ICON_GEAR_T1_MAGIK_f7022ec3.png"
+  },
+  "SoulSword_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "cf4c95daad5849d5.png",
+    "source": "Assets/Sprites/Gear/ICON_GEAR_T1_MAGIK_f7022ec3.png"
+  },
+  "SpectralWardGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "504a852638656066.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Armor2.png"
+  },
+  "SpiritCharmGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "2e3df82c30460995.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Health2.png"
+  },
+  "SplinterBomb_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6d2b6a631c7a32.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_AoE.png"
+  },
+  "SplinterBomb_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6d2b6a631c7a32.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_AoE.png"
+  },
+  "SplinterBomb_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "bb6d2b6a631c7a32.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_AoE.png"
+  },
+  "SumoSalamandar": {
+    "collection": "CharacterCollection",
+    "file": "b06ce1b780c6e388.png",
+    "source": "Assets/Sprites/Characters/Sumo/battle page-card avatar-salamander 2.png"
+  },
+  "SumoSalamandar_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "b06ce1b780c6e388.png",
+    "source": "Assets/Sprites/Characters/Sumo/battle page-card avatar-salamander 2.png"
+  },
+  "SynapticStimulantGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "4fc5b9518e90083a.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Bio_Focus1.png"
+  },
+  "TacticManual_Gear": {
+    "collection": "GearCollection",
+    "file": "8c1bcc12b43ce56c.png",
+    "source": "Assets/Sprites/Gear/gear/Damage_Cat_Green.png"
+  },
+  "TalonAssRifle_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "cc75e199bcdadaf4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Buff.png"
+  },
+  "TalonAssRifle_Green3_Gear": {
+    "collection": "GearCollection",
+    "file": "cc75e199bcdadaf4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Buff.png"
+  },
+  "TalonAssRifle_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "cc75e199bcdadaf4.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Buff.png"
+  },
+  "TalonSpiRifle_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "60a8b2d055dc140b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Single.png"
+  },
+  "TalonSpiRifle_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "60a8b2d055dc140b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Single.png"
+  },
+  "TalonSpiRifle_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "60a8b2d055dc140b.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_HydraDmg_Single.png"
+  },
+  "Teymoor": {
+    "collection": "CharacterCollection",
+    "file": "64935800eb152827.png",
+    "source": "Assets/Sprites/Characters/Teymoor/battle page-card avatar-teimor.png"
+  },
+  "Teymoor_Shard": {
+    "collection": "CharacterCollection",
+    "file": "64935800eb152827.png",
+    "source": "Assets/Sprites/Characters/Teymoor/battle page-card avatar-teimor.png"
+  },
+  "ThermalScopeGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "c8e54871211fb079.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Tech_Focus2.png"
+  },
+  "TrainingModule1": {
+    "collection": "CurrencyCollection",
+    "file": "2981fbc7ff8f6db0.png",
+    "source": "Assets/Sprites/UI/General/Currency/xp module icon bronze.png"
+  },
+  "TrainingModule2": {
+    "collection": "CurrencyCollection",
+    "file": "3a579941d0e41f26.png",
+    "source": "Assets/Sprites/UI/General/Currency/xp module icon gray.png"
+  },
+  "TrainingModule3": {
+    "collection": "CurrencyCollection",
+    "file": "b7f999253de6989a.png",
+    "source": "Assets/Sprites/UI/General/Currency/xp module icon gold.png"
+  },
+  "TrainingModule4": {
+    "collection": "CurrencyCollection",
+    "file": "9dfe45085d8e1749.png",
+    "source": "Assets/Sprites/UI/General/Currency/xp module icon diamond.png"
+  },
+  "TranscendantTalismanGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "b7d1df5e6da464a6.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Mystic_Focus3.png"
+  },
+  "VaccineRegimenGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "ae5b2191635e6885.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Skill_Health3.png"
+  },
+  "Vibroshockgauntlet_Green1_Gear": {
+    "collection": "GearCollection",
+    "file": "7d0e8f62723429fd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Shocker.png"
+  },
+  "Vibroshockgauntlet_Green2_Gear": {
+    "collection": "GearCollection",
+    "file": "7d0e8f62723429fd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Shocker.png"
+  },
+  "Vibroshockgauntlet_Green_Gear": {
+    "collection": "GearCollection",
+    "file": "7d0e8f62723429fd.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_Shocker.png"
+  },
+  "ViewedProfileLevel": {
+    "collection": "Progression UI",
+    "file": "b342d6266f6d1d8d.png",
+    "source": "Assets/Sprites/UI/Battle_Old/battle page-player character level-icon.png"
+  },
+  "WebshooterGreen1_Gear": {
+    "collection": "GearCollection",
+    "file": "86ea3928035e1b5d.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_SpiderMan.png"
+  },
+  "WebshooterGreen2_Gear": {
+    "collection": "GearCollection",
+    "file": "86ea3928035e1b5d.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_SpiderMan.png"
+  },
+  "WebshooterGreen_Gear": {
+    "collection": "GearCollection",
+    "file": "86ea3928035e1b5d.png",
+    "source": "Assets/Sprites/Gear/gear/Gear_SpiderMan.png"
+  },
+  "WildGoatEX1": {
+    "collection": "CharacterCollection",
+    "file": "8d8a1f2b0747acfc.png",
+    "source": "Assets/Sprites/Characters/wildGoat-kal/battle page-card avatar-Wild goat 2.png"
+  },
+  "WildGoatEX1_Shard": {
+    "collection": "CharacterCollection",
+    "file": "8d8a1f2b0747acfc.png",
+    "source": "Assets/Sprites/Characters/wildGoat-kal/battle page-card avatar-Wild goat 2.png"
+  },
+  "WildGoatEX2": {
+    "collection": "CharacterCollection",
+    "file": "da002e7a15ee3eb6.png",
+    "source": "Assets/Sprites/Characters/wildGoat-kal/battle page-card avatar-Wild goat.png"
+  },
+  "WildGoatEX2_Shard": {
+    "collection": "CharacterCollection",
+    "file": "da002e7a15ee3eb6.png",
+    "source": "Assets/Sprites/Characters/wildGoat-kal/battle page-card avatar-Wild goat.png"
+  },
+  "Wolf": {
+    "collection": "CharacterCollection",
+    "file": "e313bdb3e82dd9a1.png",
+    "source": "Assets/Sprites/Characters/wolf/battle page-card avatar-wolf.png"
+  },
+  "Wolf_Shard": {
+    "collection": "CurrencyCollection",
+    "file": "e313bdb3e82dd9a1.png",
+    "source": "Assets/Sprites/Characters/wolf/battle page-card avatar-wolf.png"
+  },
+  "XP": {
+    "collection": "CurrencyCollection",
+    "file": "a4a61247694be9a4.png",
+    "source": "Assets/Sprites/UI/General/general-xp icon.png"
+  },
+  "XRay_Gear": {
+    "collection": "GearCollection",
+    "file": "fefd51bdffcbbd7a.png",
+    "source": "Assets/Sprites/Gear/gear/Bio_Mat_b2.png"
+  },
+  "Xgene_Gear": {
+    "collection": "GearCollection",
+    "file": "4d8a61748e7ee2e3.png",
+    "source": "Assets/Sprites/Gear/gear/Mutant_Mat.png"
+  },
+  "YakuzaMonkey": {
+    "collection": "CharacterCollection",
+    "file": "e540e44164831fab.png",
+    "source": "Assets/Sprites/Characters/Monkey/battle page-card avatar-monkey.png"
+  },
+  "YakuzaMonkeyType2": {
+    "collection": "CharacterCollection",
+    "file": "9b8a05d324e182cc.png",
+    "source": "Assets/Sprites/Characters/Monkey/battle page-card avatar-monkey type 2.png"
+  },
+  "YakuzaMonkeyType2_Shard": {
+    "collection": "CharacterCollection",
+    "file": "9b8a05d324e182cc.png",
+    "source": "Assets/Sprites/Characters/Monkey/battle page-card avatar-monkey type 2.png"
+  },
+  "YakuzaMonkey_Shard": {
+    "collection": "CharacterCollection",
+    "file": "e540e44164831fab.png",
+    "source": "Assets/Sprites/Characters/Monkey/battle page-card avatar-monkey.png"
+  }
+}

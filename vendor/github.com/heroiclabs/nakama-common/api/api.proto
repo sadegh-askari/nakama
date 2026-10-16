@@ -1327,6 +1327,8 @@ enum StoreProvider {
   FACEBOOK_INSTANT_STORE = 3;
   // Samsung Galaxy Store
   SAMSUNG_GALAXY_STORE = 4;
+  CAFE_BAZAAR = 10;
+  MYKET = 11;
 }
 
 // Environment where a purchase/subscription took place,

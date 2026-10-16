@@ -5107,7 +5107,9 @@
         "GOOGLE_PLAY_STORE",
         "HUAWEI_APP_GALLERY",
         "FACEBOOK_INSTANT_STORE",
-        "SAMSUNG_GALAXY_STORE"
+        "SAMSUNG_GALAXY_STORE",
+        "CAFE_BAZAAR",
+        "MYKET"
       ],
       "default": "APPLE_APP_STORE",
       "description": "- APPLE_APP_STORE: Apple App Store\n - GOOGLE_PLAY_STORE: Google Play Store\n - HUAWEI_APP_GALLERY: Huawei App Gallery\n - FACEBOOK_INSTANT_STORE: Facebook Instant Store\n - SAMSUNG_GALAXY_STORE: Samsung Galaxy Store",

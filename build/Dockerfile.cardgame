@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+FROM node:22-bookworm-slim AS console-builder
+WORKDIR /src
+COPY console/ui/dist console/ui/dist
+COPY console/custom console/custom
+RUN node --test console/custom/*.test.mjs && node console/custom/build.mjs /out
+
+FROM heroiclabs/nakama-pluginbuilder:3.41.0 AS server-builder
+ARG VERSION=3.41.0-cardgame.2
+ARG COMMIT=local
+WORKDIR /builder
+COPY . .
+COPY --from=nakama-common api /tmp/common-api
+RUN cmp /tmp/common-api/api.pb.go vendor/github.com/heroiclabs/nakama-common/api/api.pb.go && cmp /tmp/common-api/api.proto vendor/github.com/heroiclabs/nakama-common/api/api.proto
+COPY --from=console-builder /out console/ui/dist
+RUN go test -mod=vendor ./server -run TestGame && go build -trimpath -mod=vendor -buildvcs=false -ldflags "-s -w -X main.version=$VERSION -X main.commitID=$COMMIT" -o /nakama-custom
+
+FROM heroiclabs/nakama:3.41.0 AS runtime
+ARG VERSION=3.41.0-cardgame.2
+LABEL org.opencontainers.image.version=$VERSION
+COPY --from=server-builder /nakama-custom /nakama/nakama
+
+FROM heroiclabs/nakama-pluginbuilder:3.41.0 AS pluginbuilder
+COPY --from=nakama-common go.mod go.sum /opt/nakama-common/
+COPY --from=nakama-common api /opt/nakama-common/api
+COPY --from=nakama-common rtapi /opt/nakama-common/rtapi
+COPY --from=nakama-common runtime /opt/nakama-common/runtime
+COPY build/cardgame-go /usr/local/bin/cardgame-go
+ENTRYPOINT ["/usr/local/bin/cardgame-go"]

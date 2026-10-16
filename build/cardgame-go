@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+if [ "${1:-}" != build ]; then
+  exec go "$@"
+fi
+shift
+mod_dir=$(mktemp -d)
+trap 'rm -rf "$mod_dir"' EXIT
+cp go.mod "$mod_dir/go.mod"
+if [ -f go.sum ]; then cp go.sum "$mod_dir/go.sum"; fi
+go mod edit -modfile="$mod_dir/go.mod" -replace=github.com/heroiclabs/nakama-common=/opt/nakama-common
+go build -modfile="$mod_dir/go.mod" -mod=mod "$@"

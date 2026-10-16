@@ -12,6 +12,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama/v3/console"
+	"github.com/heroiclabs/nakama/v3/console/acl"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,6 +37,13 @@ type methodReflection struct {
 }
 
 func (s *ConsoleServer) CallRpcEndpoint(ctx context.Context, in *console.CallApiEndpointRequest) (*console.CallApiEndpointResponse, error) {
+	actor, err := authorizeGameAdminRPC(ctx, in.Method)
+	if err != nil {
+		return nil, err
+	}
+	if actor != "" {
+		ctx = context.WithValue(ctx, "cardgame.console.actor", actor)
+	}
 	logger, _ := LoggerWithTraceId(ctx, s.logger)
 	callCtx, err := s.extractApiCallContext(ctx, logger, in, true)
 	if err != nil {
@@ -326,4 +334,30 @@ func reflectProtoMessageAsJsonTemplate(s reflect.Type) (string, error) {
 		return "", err
 	}
 	return string(j), nil
+}
+
+func authorizeGameAdminRPC(ctx context.Context, method string) (string, error) {
+	var required acl.Permission
+	switch method {
+	case "admin/bank_items":
+		required = acl.NewPermission(console.AclResources_STORAGE_DATA, acl.PermissionRead)
+	case "admin/grant_resources", "admin/purchase_correct":
+		required = acl.NewPermission(console.AclResources_ACCOUNT_WALLET, acl.PermissionWrite).Compose(acl.NewPermission(console.AclResources_NOTIFICATION, acl.PermissionWrite))
+		if method == "admin/purchase_correct" {
+			required = required.Compose(acl.NewPermission(console.AclResources_IN_APP_PURCHASE, acl.PermissionWrite))
+		}
+	case "admin/purchase_verify":
+		required = acl.NewPermission(console.AclResources_IN_APP_PURCHASE, acl.PermissionRead)
+	default:
+		return "", nil
+	}
+	permission, ok := ctx.Value(ctxConsoleUserAclKey{}).(acl.Permission)
+	if !ok || !permission.HasAccess(required) {
+		return "", status.Error(codes.PermissionDenied, "Dashboard resource permissions required")
+	}
+	actor, _ := ctx.Value(ctxConsoleUsernameKey{}).(string)
+	if actor == "" {
+		return "", status.Error(codes.PermissionDenied, "Dashboard operator identity required")
+	}
+	return actor, nil
 }

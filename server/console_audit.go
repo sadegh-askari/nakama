@@ -206,7 +206,24 @@ func consoleAuditLogInterceptor(logger *zap.Logger, db *sql.DB) func(context.Con
 			case "/nakama.console.Console/CallRpcEndpoint":
 				action = console.AuditLogAction_INVOKE
 				resource = console.AclResources_API_EXPLORER
-				metadata, mErr = auditLogMarshaller.Marshal(msg)
+				auditMessage := msg
+				if request, ok := msg.(*console.CallApiEndpointRequest); ok && (request.Method == "admin/purchase_verify" || request.Method == "admin/purchase_correct") {
+					redacted := proto.Clone(request).(*console.CallApiEndpointRequest)
+					var body map[string]interface{}
+					if json.Unmarshal([]byte(redacted.Body), &body) == nil {
+						for key := range body {
+							if strings.EqualFold(key, "Token") {
+								body[key] = "[redacted]"
+							}
+						}
+						encoded, _ := json.Marshal(body)
+						redacted.Body = string(encoded)
+					} else {
+						redacted.Body = "[redacted]"
+					}
+					auditMessage = redacted
+				}
+				metadata, mErr = auditLogMarshaller.Marshal(auditMessage)
 				log = "api explorer endpoint invoked"
 			case "/nakama.console.Console/DeleteAccount":
 				action = console.AuditLogAction_DELETE
